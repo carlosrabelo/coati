@@ -2,6 +2,8 @@ package ports
 
 import (
 	"os"
+
+	"coati/coati/internal/core/domain"
 )
 
 type FileReader interface {
@@ -10,4 +12,12 @@ type FileReader interface {
 
 type FileWriter interface {
 	WriteFile(path string, content []byte, perm os.FileMode) error
+}
+
+type HostsParser interface {
+	ParseHosts(content []byte) ([]domain.HostEntry, error)
+}
+
+type SSHParser interface {
+	ParseSSHConfig(content []byte) ([]domain.SSHConfig, error)
 }
