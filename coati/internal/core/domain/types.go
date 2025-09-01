@@ -1,5 +1,9 @@
 package domain
 
+import (
+	"fmt"
+)
+
 type GlobalConfig struct {
 	Defaults            SSHDefaults   `yaml:"defaults"`
 	Hosts               []HostConfig  `yaml:"hosts"`
@@ -62,4 +66,36 @@ type SSHConfig struct {
 	Port         int
 	IdentityFile string
 	Options      map[string]string
+}
+
+func (c *GlobalConfig) Validate() error {
+	v := NewValidator()
+	for i, h := range c.Hosts {
+		// The ip field accepts a valid IP address (for /etc/hosts generation) or a hostname
+		// (for SSH-only entries, e.g. "github.com", which are skipped in /etc/hosts).
+		if errIP := v.ValidateIP(h.IP); errIP != nil {
+			if errHost := v.ValidateHostname(h.IP); errHost != nil {
+				return fmt.Errorf("host[%d]: ip field %q is neither a valid IP address nor a valid hostname", i, h.IP)
+			}
+		}
+		if err := v.ValidateHostname(h.Hostname); err != nil {
+			return fmt.Errorf("host[%d]: invalid hostname %q: %w", i, h.Hostname, err)
+		}
+		for _, alias := range h.Aliases {
+			if err := v.ValidateHostname(alias); err != nil {
+				return fmt.Errorf("host[%d]: invalid alias %q: %w", i, alias, err)
+			}
+		}
+	}
+	seenHostnames := make(map[string]bool)
+	for i, h := range c.Hosts {
+		if seenHostnames[h.Hostname] {
+			return fmt.Errorf("host[%d]: duplicate hostname %q", i, h.Hostname)
+		}
+		seenHostnames[h.Hostname] = true
+	}
+	if c.Defaults.Port != 0 && (c.Defaults.Port < 1 || c.Defaults.Port > 65535) {
+		return fmt.Errorf("invalid default port: %d", c.Defaults.Port)
+	}
+	return nil
 }
