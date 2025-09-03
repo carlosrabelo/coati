@@ -14,6 +14,10 @@ type FileWriter interface {
 	WriteFile(path string, content []byte, perm os.FileMode) error
 }
 
+type HostsGenerator interface {
+	GenerateHosts() ([]byte, error)
+}
+
 type GistFetcher interface {
 	Fetch(gistID, token, gistFile string) ([]byte, error)
 }
