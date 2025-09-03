@@ -18,6 +18,10 @@ type HostsGenerator interface {
 	GenerateHosts() ([]byte, error)
 }
 
+type SSHGenerator interface {
+	GenerateSSHConfig() ([]byte, error)
+}
+
 type GistFetcher interface {
 	Fetch(gistID, token, gistFile string) ([]byte, error)
 }
