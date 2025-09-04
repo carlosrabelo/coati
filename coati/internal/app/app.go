@@ -26,6 +26,8 @@ type Config struct {
 	GistID            string
 	GistFile          string
 	GitHubToken       string
+	DryRun            bool
+	Check             bool
 	Verbose           bool
 	ForceRefresh      bool
 	Backup            bool
@@ -135,6 +137,34 @@ func (app *Application) Run() error {
 	sshTargets, err := app.resolveSSHTargets(targetUsers)
 	if err != nil {
 		return err
+	}
+
+	if app.cfg.DryRun {
+		fmt.Println("\n=== DRY RUN MODE: No files will be modified ===")
+		if hostsData != nil {
+			printColoredDiff(fmt.Sprintf("Content for %s", app.cfg.OutputHostsFile), hostsData)
+		}
+		if sshData != nil {
+			for _, target := range sshTargets {
+				printColoredDiff(fmt.Sprintf("Content for %s", target.path), sshData)
+			}
+		}
+		fmt.Println("\n=== End of Dry Run ===")
+		return nil
+	}
+
+	if app.cfg.Check {
+		fmt.Println("\n=== CHECK MODE: No files will be modified ===")
+		if hostsData != nil {
+			printFileDiff(app.cfg.OutputHostsFile, app.cfg.OutputHostsFile, hostsData)
+		}
+		if sshData != nil {
+			for _, target := range sshTargets {
+				printFileDiff(target.path, target.path, sshData)
+			}
+		}
+		fmt.Println("\n=== End of Check ===")
+		return nil
 	}
 
 	if app.cfg.Backup {
