@@ -8,6 +8,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -16,6 +17,12 @@ import (
 	"coati/coati/internal/core/domain"
 	"coati/coati/internal/core/services"
 	"coati/coati/internal/templates"
+)
+
+const (
+	ScopeSystem = "system"
+	ScopeUser   = "user"
+	ScopeAll    = "all"
 )
 
 type Config struct {
@@ -32,6 +39,7 @@ type Config struct {
 	Verbose           bool
 	ForceRefresh      bool
 	Backup            bool
+	Scope             string
 	Users             []string
 }
 
@@ -69,6 +77,16 @@ func New(logger *slog.Logger, cfg Config) (*Application, error) {
 }
 
 func (app *Application) Run() error {
+	scope, err := normalizeScope(app.cfg.Scope)
+	if err != nil {
+		return err
+	}
+	scope, err = app.resolveEffectiveScope(scope)
+	if err != nil {
+		return err
+	}
+	app.cfg.Scope = scope
+
 	appConfig, err := app.configManager.LoadConfig()
 	if err != nil {
 		app.logger.Warn("Failed to load app config", "error", err)
@@ -115,20 +133,26 @@ func (app *Application) Run() error {
 	hostsGenerator := services.NewHostsGenerator(globalConfig, app.fsAdapter, app.resolveTemplate())
 	sshGenerator := services.NewSSHGenerator(globalConfig)
 
-	app.logger.Info("Generating hosts file...")
-	startHosts := time.Now()
-	hostsData, err := hostsGenerator.GenerateHosts()
-	metrics.HostsGenDuration = time.Since(startHosts)
-	if err != nil {
-		return fmt.Errorf("failed to generate hosts: %w", err)
+	var hostsData []byte
+	if scope == ScopeSystem || scope == ScopeAll {
+		app.logger.Info("Generating hosts file...")
+		startHosts := time.Now()
+		hostsData, err = hostsGenerator.GenerateHosts()
+		metrics.HostsGenDuration = time.Since(startHosts)
+		if err != nil {
+			return fmt.Errorf("failed to generate hosts: %w", err)
+		}
 	}
 
-	app.logger.Info("Generating SSH config...")
-	startSSH := time.Now()
-	sshData, err := sshGenerator.GenerateSSHConfig()
-	metrics.SSHGenDuration = time.Since(startSSH)
-	if err != nil {
-		return fmt.Errorf("failed to generate SSH config: %w", err)
+	var sshData []byte
+	if scope == ScopeUser || scope == ScopeAll {
+		app.logger.Info("Generating SSH config...")
+		startSSH := time.Now()
+		sshData, err = sshGenerator.GenerateSSHConfig()
+		metrics.SSHGenDuration = time.Since(startSSH)
+		if err != nil {
+			return fmt.Errorf("failed to generate SSH config: %w", err)
+		}
 	}
 
 	targetUsers, err := services.ResolveTargetUsers(app.cfg.Users)
@@ -192,42 +216,55 @@ func (app *Application) Run() error {
 		return nil
 	}
 
-	if app.cfg.Backup {
-		if err := app.createBackup(app.cfg.OutputHostsFile); err != nil {
-			app.logger.Warn("Failed to create backup for hosts file", "path", app.cfg.OutputHostsFile, "error", err)
+	var writeErrs []error
+
+	if hostsData != nil {
+		if app.cfg.Backup {
+			if err := app.createBackup(app.cfg.OutputHostsFile); err != nil {
+				app.logger.Warn("Failed to create backup for hosts file", "path", app.cfg.OutputHostsFile, "error", err)
+			}
+		}
+		app.logger.Info("Writing hosts file", "path", app.cfg.OutputHostsFile)
+		if err := writeAtomic(app.cfg.OutputHostsFile, hostsData, 0644); err != nil {
+			if scope == ScopeAll && isPermissionError(err) {
+				app.logger.Warn("Skipping hosts write (permission denied); run with sudo for --scope system",
+					"path", app.cfg.OutputHostsFile, "error", err)
+				fmt.Println("Tip: run with sudo for --scope system")
+			} else if scope == ScopeSystem && isPermissionError(err) {
+				return fmt.Errorf("failed to write hosts file %s (root required): %w", app.cfg.OutputHostsFile, err)
+			} else {
+				return fmt.Errorf("failed to write hosts file: %w", err)
+			}
 		}
 	}
-	app.logger.Info("Writing hosts file", "path", app.cfg.OutputHostsFile)
-	if err := writeAtomic(app.cfg.OutputHostsFile, hostsData, 0644); err != nil {
-		return fmt.Errorf("failed to write hosts file: %w", err)
-	}
 
-	var writeErrs []error
-	for _, target := range sshTargets {
-		content := sshData
-		if app.cfg.Merge && len(sshTargets) > 1 {
-			content, err = mergeWithMarkers(target.path, sshData)
-			if err != nil {
-				writeErrs = append(writeErrs, fmt.Errorf("merge SSH for %s: %w", target.username, err))
+	if sshData != nil {
+		for _, target := range sshTargets {
+			content := sshData
+			if app.cfg.Merge && len(sshTargets) > 1 {
+				content, err = mergeWithMarkers(target.path, sshData)
+				if err != nil {
+					writeErrs = append(writeErrs, fmt.Errorf("merge SSH for %s: %w", target.username, err))
+					continue
+				}
+			}
+
+			if app.cfg.Backup {
+				if err := app.createBackup(target.path); err != nil {
+					app.logger.Warn("Failed to create backup for SSH config file", "path", target.path, "error", err)
+				}
+			}
+			app.logger.Info("Writing SSH config", "path", target.path, "user", target.username)
+			if err := writeAtomic(target.path, content, 0600); err != nil {
+				writeErrs = append(writeErrs, fmt.Errorf("write SSH for %s: %w", target.username, err))
 				continue
 			}
-		}
-
-		if app.cfg.Backup {
-			if err := app.createBackup(target.path); err != nil {
-				app.logger.Warn("Failed to create backup for SSH config file", "path", target.path, "error", err)
+			if err := chownPath(target.path, target.uid, target.gid); err != nil {
+				app.logger.Warn("Failed to chown SSH config", "path", target.path, "user", target.username, "error", err)
 			}
-		}
-		app.logger.Info("Writing SSH config", "path", target.path, "user", target.username)
-		if err := writeAtomic(target.path, content, 0600); err != nil {
-			writeErrs = append(writeErrs, fmt.Errorf("write SSH for %s: %w", target.username, err))
-			continue
-		}
-		if err := chownPath(target.path, target.uid, target.gid); err != nil {
-			app.logger.Warn("Failed to chown SSH config", "path", target.path, "user", target.username, "error", err)
-		}
-		if err := chownPath(filepath.Dir(target.path), target.uid, target.gid); err != nil {
-			app.logger.Debug("Failed to chown SSH directory", "path", filepath.Dir(target.path), "error", err)
+			if err := chownPath(filepath.Dir(target.path), target.uid, target.gid); err != nil {
+				app.logger.Debug("Failed to chown SSH directory", "path", filepath.Dir(target.path), "error", err)
+			}
 		}
 	}
 
@@ -283,6 +320,46 @@ func (app *Application) resolveSSHTargets(usernames []string) ([]sshTarget, erro
 		})
 	}
 	return targets, nil
+}
+
+func normalizeScope(scope string) (string, error) {
+	switch strings.ToLower(strings.TrimSpace(scope)) {
+	case "":
+		if services.RunningAsRoot() {
+			return ScopeAll, nil
+		}
+		return ScopeUser, nil
+	case ScopeAll:
+		return ScopeAll, nil
+	case ScopeSystem:
+		return ScopeSystem, nil
+	case ScopeUser:
+		return ScopeUser, nil
+	default:
+		return "", fmt.Errorf("invalid scope %q (want system, user, or all)", scope)
+	}
+}
+
+func (app *Application) resolveEffectiveScope(scope string) (string, error) {
+	if services.RunningAsRoot() || !isSystemHostsPath(app.cfg.OutputHostsFile) {
+		return scope, nil
+	}
+
+	switch scope {
+	case ScopeSystem, ScopeAll:
+		return "", fmt.Errorf("--scope %s requires root to write %s; run with sudo (or use --scope user)",
+			scope, app.cfg.OutputHostsFile)
+	default:
+		return scope, nil
+	}
+}
+
+func isSystemHostsPath(path string) bool {
+	return path == "" || path == services.DefaultHostsOutput()
+}
+
+func isPermissionError(err error) bool {
+	return errors.Is(err, os.ErrPermission) || os.IsPermission(err)
 }
 
 func chownPath(path string, uid, gid int) error {
