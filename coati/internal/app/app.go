@@ -28,6 +28,7 @@ type Config struct {
 	GitHubToken       string
 	DryRun            bool
 	Check             bool
+	Merge             bool
 	Verbose           bool
 	ForceRefresh      bool
 	Backup            bool
@@ -153,6 +154,23 @@ func (app *Application) Run() error {
 		return nil
 	}
 
+	if app.cfg.Merge {
+		if hostsData != nil {
+			hostsData, err = mergeWithMarkers(app.cfg.OutputHostsFile, hostsData)
+			if err != nil {
+				return fmt.Errorf("failed to merge hosts file: %w", err)
+			}
+		}
+		if sshData != nil {
+			if len(sshTargets) == 1 {
+				sshData, err = mergeWithMarkers(sshTargets[0].path, sshData)
+				if err != nil {
+					return fmt.Errorf("failed to merge SSH config: %w", err)
+				}
+			}
+		}
+	}
+
 	if app.cfg.Check {
 		fmt.Println("\n=== CHECK MODE: No files will be modified ===")
 		if hostsData != nil {
@@ -160,7 +178,14 @@ func (app *Application) Run() error {
 		}
 		if sshData != nil {
 			for _, target := range sshTargets {
-				printFileDiff(target.path, target.path, sshData)
+				content := sshData
+				if app.cfg.Merge && len(sshTargets) > 1 {
+					content, err = mergeWithMarkers(target.path, sshData)
+					if err != nil {
+						return fmt.Errorf("failed to merge SSH config for %s: %w", target.username, err)
+					}
+				}
+				printFileDiff(target.path, target.path, content)
 			}
 		}
 		fmt.Println("\n=== End of Check ===")
@@ -179,13 +204,22 @@ func (app *Application) Run() error {
 
 	var writeErrs []error
 	for _, target := range sshTargets {
+		content := sshData
+		if app.cfg.Merge && len(sshTargets) > 1 {
+			content, err = mergeWithMarkers(target.path, sshData)
+			if err != nil {
+				writeErrs = append(writeErrs, fmt.Errorf("merge SSH for %s: %w", target.username, err))
+				continue
+			}
+		}
+
 		if app.cfg.Backup {
 			if err := app.createBackup(target.path); err != nil {
 				app.logger.Warn("Failed to create backup for SSH config file", "path", target.path, "error", err)
 			}
 		}
 		app.logger.Info("Writing SSH config", "path", target.path, "user", target.username)
-		if err := writeAtomic(target.path, sshData, 0600); err != nil {
+		if err := writeAtomic(target.path, content, 0600); err != nil {
 			writeErrs = append(writeErrs, fmt.Errorf("write SSH for %s: %w", target.username, err))
 			continue
 		}
