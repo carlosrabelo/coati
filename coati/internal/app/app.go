@@ -89,11 +89,15 @@ func (app *Application) Run() error {
 	}
 	app.cfg.Scope = scope
 
+	// 1. Load App Config
 	appConfig, err := app.configManager.LoadConfig()
 	if err != nil {
 		app.logger.Warn("Failed to load app config", "error", err)
 	}
 
+	// 2. Override with CLI / Env
+	// Prefer the canonical local YAML when present so --scope user can run
+	// without root/network. Only fall back to Gist when that file is missing.
 	if app.cfg.GistID == "" && app.cfg.HostsListFile == services.HostsYAMLPath() {
 		if _, err := os.Stat(app.cfg.HostsListFile); err != nil {
 			app.cfg.GistID = appConfig.GistID
@@ -106,6 +110,7 @@ func (app *Application) Run() error {
 		app.cfg.GitHubToken = os.Getenv("GITHUB_TOKEN")
 	}
 
+	// Merge allowed hooks from CLI and local AppConfig
 	allowedHooks := app.cfg.AllowedHooks
 	for _, h := range appConfig.AllowedHooks {
 		found := false
@@ -121,6 +126,7 @@ func (app *Application) Run() error {
 	}
 	app.cfg.AllowedHooks = allowedHooks
 
+	// 3. Create Metrics
 	metrics := domain.NewMetrics()
 	defer func() {
 		if app.cfg.Verbose {
@@ -128,6 +134,7 @@ func (app *Application) Run() error {
 		}
 	}()
 
+	// 4. Resolve input path (Gist or local)
 	startFetch := time.Now()
 	inputPath, cleanup, err := app.resolveInputPath()
 	metrics.FetchDuration = time.Since(startFetch)
@@ -136,6 +143,7 @@ func (app *Application) Run() error {
 		return err
 	}
 
+	// 6. Read & Parse Config
 	startParse := time.Now()
 	data, err := app.fsAdapter.ReadFile(inputPath)
 	if err != nil {
@@ -152,6 +160,7 @@ func (app *Application) Run() error {
 	}
 	metrics.ParseDuration = time.Since(startParse)
 
+	// 7. Generate Content
 	hostsGenerator := services.NewHostsGenerator(globalConfig, app.fsAdapter, app.resolveTemplate())
 	sshGenerator := services.NewSSHGenerator(globalConfig)
 
@@ -186,6 +195,7 @@ func (app *Application) Run() error {
 		return err
 	}
 
+	// 8. Dry Run: show full generated content without merging
 	if app.cfg.DryRun {
 		fmt.Println("\n=== DRY RUN MODE: No files will be modified ===")
 		if hostsData != nil {
@@ -200,6 +210,7 @@ func (app *Application) Run() error {
 		return nil
 	}
 
+	// 9. Merge: wrap existing content and embed new content inside markers
 	if app.cfg.Merge {
 		if hostsData != nil {
 			hostsData, err = mergeWithMarkers(app.cfg.OutputHostsFile, hostsData)
@@ -208,6 +219,8 @@ func (app *Application) Run() error {
 			}
 		}
 		if sshData != nil {
+			// Merge is applied per target path at write time when multiple users differ;
+			// for check/dry-run we merge against the first target below.
 			if len(sshTargets) == 1 {
 				sshData, err = mergeWithMarkers(sshTargets[0].path, sshData)
 				if err != nil {
@@ -217,6 +230,7 @@ func (app *Application) Run() error {
 		}
 	}
 
+	// 10. Check: show diff between current files and what would be written
 	if app.cfg.Check {
 		fmt.Println("\n=== CHECK MODE: No files will be modified ===")
 		if hostsData != nil {
@@ -251,7 +265,7 @@ func (app *Application) Run() error {
 			if scope == ScopeAll && isPermissionError(err) {
 				app.logger.Warn("Skipping hosts write (permission denied); run with sudo for --scope system",
 					"path", app.cfg.OutputHostsFile, "error", err)
-				fmt.Println("Tip: run with sudo for --scope system")
+				fmt.Println("Tip: sudo coati process --scope system")
 			} else if scope == ScopeSystem && isPermissionError(err) {
 				return fmt.Errorf("failed to write hosts file %s (root required): %w", app.cfg.OutputHostsFile, err)
 			} else {
@@ -276,6 +290,7 @@ func (app *Application) Run() error {
 					app.logger.Warn("Failed to create backup for SSH config file", "path", target.path, "error", err)
 				}
 			}
+
 			app.logger.Info("Writing SSH config", "path", target.path, "user", target.username)
 			if err := writeAtomic(target.path, content, 0600); err != nil {
 				writeErrs = append(writeErrs, fmt.Errorf("write SSH for %s: %w", target.username, err))
@@ -284,6 +299,7 @@ func (app *Application) Run() error {
 			if err := chownPath(target.path, target.uid, target.gid); err != nil {
 				app.logger.Warn("Failed to chown SSH config", "path", target.path, "user", target.username, "error", err)
 			}
+			// Also fix ownership of ~/.ssh if we created it.
 			if err := chownPath(filepath.Dir(target.path), target.uid, target.gid); err != nil {
 				app.logger.Debug("Failed to chown SSH directory", "path", filepath.Dir(target.path), "error", err)
 			}
@@ -294,6 +310,7 @@ func (app *Application) Run() error {
 		return errors.Join(writeErrs...)
 	}
 
+	// 11. Post-Execution Hooks
 	if len(globalConfig.PostHooks) > 0 {
 		app.logger.Info("Running post-execution hooks...")
 		return app.runHooks(globalConfig.PostHooks)
@@ -312,6 +329,7 @@ type sshTarget struct {
 
 func (app *Application) resolveSSHTargets(usernames []string) ([]sshTarget, error) {
 	if app.cfg.OutputConfigFile != "" {
+		// Explicit override: single path, ownership of current process user.
 		uid, gid := -1, -1
 		if u, err := user.Current(); err == nil {
 			uid, _ = strconv.Atoi(u.Uid)
@@ -352,6 +370,7 @@ func (app *Application) resolveSSHTargets(usernames []string) ([]sshTarget, erro
 func normalizeScope(scope string) (string, error) {
 	switch strings.ToLower(strings.TrimSpace(scope)) {
 	case "":
+		// Complete update (all) is root-only; users default to SSH-only.
 		if services.RunningAsRoot() {
 			return ScopeAll, nil
 		}
@@ -367,6 +386,8 @@ func normalizeScope(scope string) (string, error) {
 	}
 }
 
+// resolveEffectiveScope rejects root-only scopes when not elevated and the
+// hosts output is the system path. Custom --output-hosts (tests/dev) is allowed.
 func (app *Application) resolveEffectiveScope(scope string) (string, error) {
 	if services.RunningAsRoot() || !isSystemHostsPath(app.cfg.OutputHostsFile) {
 		return scope, nil
@@ -399,6 +420,8 @@ func chownPath(path string, uid, gid int) error {
 	return os.Chown(path, uid, gid)
 }
 
+// resolveInputPath returns the path to the configuration file and a cleanup
+// function to be deferred. For local files, cleanup is a no-op.
 func (app *Application) resolveInputPath() (string, func(), error) {
 	noop := func() {}
 
@@ -418,6 +441,7 @@ func (app *Application) resolveInputPath() (string, func(), error) {
 		return "", noop, fmt.Errorf("failed to fetch Gist: %w", err)
 	}
 
+	// Persist canonical copy when possible (best-effort).
 	canonical := services.HostsYAMLPath()
 	if err := writeAtomic(canonical, content, 0644); err != nil {
 		app.logger.Debug("Could not persist canonical hosts.yaml", "path", canonical, "error", err)
@@ -444,6 +468,7 @@ func (app *Application) resolveInputPath() (string, func(), error) {
 	return tmpFile.Name(), cleanup, nil
 }
 
+// loadGlobalConfig parses and validates a YAML configuration.
 func loadGlobalConfig(data []byte) (domain.GlobalConfig, error) {
 	var cfg domain.GlobalConfig
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
@@ -455,10 +480,14 @@ func loadGlobalConfig(data []byte) (domain.GlobalConfig, error) {
 	return cfg, nil
 }
 
+// WriteAtomicPublic is the exported wrapper around writeAtomic for use outside
+// the app package.
 func WriteAtomicPublic(dest string, data []byte, perm os.FileMode) error {
 	return writeAtomic(dest, data, perm)
 }
 
+// writeAtomic writes data to a temp file in the same directory as dest, then
+// renames it into place. This ensures dest is never left partially written.
 func writeAtomic(dest string, data []byte, perm os.FileMode) error {
 	dir := filepath.Dir(dest)
 	if err := os.MkdirAll(dir, 0755); err != nil {
@@ -485,6 +514,8 @@ func writeAtomic(dest string, data []byte, perm os.FileMode) error {
 	return os.Rename(tmpName, dest)
 }
 
+// resolveTemplate returns the hosts template content. Falls back to the
+// embedded default if no custom template file is specified or readable.
 func (app *Application) resolveTemplate() string {
 	if app.cfg.HostsTemplateFile == "" {
 		return templates.HostsTemplate
