@@ -39,6 +39,8 @@ type Config struct {
 	Verbose           bool
 	ForceRefresh      bool
 	Backup            bool
+	AllowUnsafeHooks  bool
+	AllowedHooks      []string
 	Scope             string
 	Users             []string
 }
@@ -98,6 +100,21 @@ func (app *Application) Run() error {
 	if app.cfg.GitHubToken == "" {
 		app.cfg.GitHubToken = os.Getenv("GITHUB_TOKEN")
 	}
+
+	allowedHooks := app.cfg.AllowedHooks
+	for _, h := range appConfig.AllowedHooks {
+		found := false
+		for _, existing := range allowedHooks {
+			if existing == h {
+				found = true
+				break
+			}
+		}
+		if !found {
+			allowedHooks = append(allowedHooks, h)
+		}
+	}
+	app.cfg.AllowedHooks = allowedHooks
 
 	metrics := domain.NewMetrics()
 	defer func() {
@@ -270,6 +287,11 @@ func (app *Application) Run() error {
 
 	if len(writeErrs) > 0 {
 		return errors.Join(writeErrs...)
+	}
+
+	if len(globalConfig.PostHooks) > 0 {
+		app.logger.Info("Running post-execution hooks...")
+		return app.runHooks(globalConfig.PostHooks)
 	}
 
 	app.logger.Info("Coati execution completed successfully")
