@@ -22,5 +22,7 @@ func Execute() error {
 	}
 	rootCmd.SetHelpCommand(&cobra.Command{Hidden: true})
 	rootCmd.AddCommand(newProcessCmd())
+	rootCmd.AddCommand(pullCmd)
+	rootCmd.AddCommand(pushCmd)
 	return rootCmd.Execute()
 }
