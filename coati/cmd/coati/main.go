@@ -24,5 +24,6 @@ func Execute() error {
 	rootCmd.AddCommand(newProcessCmd())
 	rootCmd.AddCommand(pullCmd)
 	rootCmd.AddCommand(pushCmd)
+	rootCmd.AddCommand(importCmd)
 	return rootCmd.Execute()
 }
