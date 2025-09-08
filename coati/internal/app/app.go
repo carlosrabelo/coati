@@ -94,6 +94,11 @@ func (app *Application) Run() error {
 		app.logger.Warn("Failed to load app config", "error", err)
 	}
 
+	if app.cfg.GistID == "" && app.cfg.HostsListFile == services.HostsYAMLPath() {
+		if _, err := os.Stat(app.cfg.HostsListFile); err != nil {
+			app.cfg.GistID = appConfig.GistID
+		}
+	}
 	if app.cfg.GitHubToken == "" {
 		app.cfg.GitHubToken = appConfig.GitHubToken
 	}
@@ -396,8 +401,47 @@ func chownPath(path string, uid, gid int) error {
 
 func (app *Application) resolveInputPath() (string, func(), error) {
 	noop := func() {}
-	app.logger.Info("Using local configuration file", "path", app.cfg.HostsListFile)
-	return app.cfg.HostsListFile, noop, nil
+
+	if app.cfg.GistID == "" {
+		app.logger.Info("Using local configuration file", "path", app.cfg.HostsListFile)
+		return app.cfg.HostsListFile, noop, nil
+	}
+
+	if app.cfg.GitHubToken == "" {
+		app.logger.Error("GitHub token required for Gist fetch")
+		fmt.Println("Tip: Provide --github-token or set GITHUB_TOKEN env var.")
+		return "", noop, fmt.Errorf("github token missing")
+	}
+
+	content, err := app.configManager.FetchGist(app.cfg.GistID, app.cfg.GitHubToken, app.cfg.GistFile)
+	if err != nil {
+		return "", noop, fmt.Errorf("failed to fetch Gist: %w", err)
+	}
+
+	canonical := services.HostsYAMLPath()
+	if err := writeAtomic(canonical, content, 0644); err != nil {
+		app.logger.Debug("Could not persist canonical hosts.yaml", "path", canonical, "error", err)
+	} else {
+		app.logger.Info("Updated canonical hosts.yaml", "path", canonical)
+	}
+
+	tmpFile, err := os.CreateTemp("", "hosts-*.yaml")
+	if err != nil {
+		return "", noop, fmt.Errorf("failed to create temp file: %w", err)
+	}
+	cleanup := func() {
+		_ = tmpFile.Close()
+		_ = os.Remove(tmpFile.Name())
+	}
+
+	if _, err := tmpFile.Write(content); err != nil {
+		cleanup()
+		return "", noop, fmt.Errorf("failed to write temp file: %w", err)
+	}
+	_ = tmpFile.Close()
+
+	app.logger.Info("Using Gist configuration", "gist_id", app.cfg.GistID, "temp_file", tmpFile.Name())
+	return tmpFile.Name(), cleanup, nil
 }
 
 func loadGlobalConfig(data []byte) (domain.GlobalConfig, error) {
