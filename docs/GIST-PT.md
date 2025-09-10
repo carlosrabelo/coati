@@ -1,0 +1,130 @@
+---
+layout: default
+title: Sintaxe do Gist
+---
+
+# Referência de Configuração
+
+O Coati usa uma estrutura YAML única para definir sua infraestrutura. Este conteúdo deve ser armazenado em seu GitHub Gist privado.
+
+> **Nota**: O nome do arquivo dentro do Gist (ex.: `hosts.yaml`) não é relevante; o Coati lê o primeiro arquivo ordenado alfabeticamente no Gist. Recomenda-se usar a extensão `.yaml` ou `.yml` para realce de sintaxe.
+
+## Visão Geral da Estrutura
+
+A configuração é dividida em três seções principais:
+1. **defaults**: Configurações globais para geração do SSH.
+2. **hosts**: Lista de máquinas/servidores.
+3. **cnames**: Aliases que apontam para outros hostnames.
+
+## 1. Defaults
+Estas configurações se aplicam ao bloco `Host *` no SSH config gerado, funcionando como valores padrão.
+
+```yaml
+defaults:
+  user: root                     # Usuário SSH padrão
+  port: 22                       # Porta SSH padrão
+  identity_file: ~/.ssh/id_rsa   # Chave privada padrão
+  options:                       # Opções SSH arbitrárias (Chave: Valor)
+    StrictHostKeyChecking: "no"
+    ServerAliveInterval: "120"
+```
+
+## 2. Hosts
+Esta lista define seus endpoints reais. Cada entrada gera uma linha no `/etc/hosts` E um bloco `Host` no `~/.ssh/config`.
+
+```yaml
+hosts:
+  - ip: "10.0.0.50"              # [Obrigatório] Endereço IP ou Nome de Domínio (múltiplas entradas podem compartilhar o mesmo IP/domínio)
+    hostname: "db-prod"          # [Obrigatório] Hostname canônico
+    
+    # [Opcional] Lista de aliases.
+    # Adicionados à linha do /etc/hosts e à linha 'Host' do SSH.
+    aliases: ["db", "postgresql"]
+    
+    # [Opcional] Usuário SSH específico para este host
+    user: "admin"
+    
+    # [Opcional] Porta SSH
+    port: 2222
+    
+    # [Opcional] Chave específica
+    identity_file: "~/.ssh/db_key"
+    
+    # [Opcional] Nome DNS para lógica PTR/DNS reverso (adicionado aos aliases)
+    dns_name: "ec2-10-0-0-50.compute.amazonaws.com"
+    
+    # [Opcional] Opções SSH adicionais arbitrárias
+    options:
+      ForwardAgent: "yes"
+      
+    # [Opcional] Comentário adicionado à linha do /etc/hosts
+    comment: "Banco de Dados Principal"
+```
+
+## 3. CNAMEs (Aliases)
+Use para criar atalhos convenientes para hosts existentes sem duplicar IPs.
+
+```yaml
+cnames:
+  - target: "db-prod"            # Deve corresponder a um 'hostname' definido acima
+    alias:                       # Nota: chave é 'alias' (singular)
+      - "writer.db"
+      - "reader.db"
+```
+
+## 4. PTRs (DNS Reverso)
+Mapeia um IP para um domínio. Útil quando você quer buscar um domínio pelo IP (adicionado aos aliases do host).
+
+```yaml
+ptrs:
+  - ip: "192.168.1.10"
+    domain: "web-01.example.com"
+```
+
+## 5. Modo Simplificado
+Lista de hostnames que não devem ter Aliases/CNAMEs/PTRs processados. Útil para hosts específicos onde você quer controle estrito.
+
+```yaml
+simplified_mode_hosts:
+  - "db-prod"
+```
+
+## 6. Post Hooks
+Lista de comandos a serem executados após a escrita bem-sucedida dos arquivos. Por motivos de segurança, os comandos são restritos a uma lista pré-aprovada (ex: systemctl, docker, kubectl, service, nginx, apache2, httpd), a menos que explicitamente contornado por flags da CLI.
+
+```yaml
+post_hooks:
+  - "systemctl restart dnsmasq"
+```
+
+## Exemplo Completo
+
+```yaml
+defaults:
+  user: ubuntu
+  identity_file: ~/.ssh/id_rsa
+
+hosts:
+  - ip: "192.168.1.10"
+    hostname: "web-01"
+    aliases: ["www"]
+
+  - ip: "192.168.1.11"
+    hostname: "web-02"
+
+cnames:
+  - target: "web-01"
+    alias:
+      - "primary"
+      - "loadbalancer"
+
+ptrs:
+  - ip: "192.168.1.10"
+    domain: "web-01.internal"
+
+simplified_mode_hosts:
+  - "web-02"
+
+post_hooks:
+  - "systemctl restart dnsmasq"
+```

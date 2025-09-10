@@ -9,10 +9,10 @@ CLI that generates `/etc/hosts` and `~/.ssh/config` from a YAML definition (loca
 
 ## Documentation
 
-| English |
-|---------|
-| [User Guide](GUIDE.md) |
-| [Gist Schema](GIST.md) |
+| English | Português |
+|---------|-----------|
+| [User Guide](GUIDE.md) | [Guia de Uso](GUIDE-PT.md) |
+| [Gist Schema](GIST.md) | [Sintaxe do Gist](GIST-PT.md) |
 
 ## Repository
 
