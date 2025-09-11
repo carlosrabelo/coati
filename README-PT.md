@@ -4,6 +4,7 @@ CLI que gera `/etc/hosts` e `~/.ssh/config` a partir de uma definição YAML arm
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Go Version](https://img.shields.io/badge/Go-1.25%2B-blue.svg)](https://go.dev/)
+[![Release](https://img.shields.io/github/release/carlosrabelo/coati.svg)](https://github.com/carlosrabelo/coati/releases)
 
 ## Destaques
 
@@ -31,13 +32,13 @@ cd coati
 make build
 ```
 
-Instale em `~/.local/bin` (padrão), ou em todo o sistema em `/usr/local/bin` (sudo só para a cópia):
+Instale em `~/.local/bin` (padrão), ou defina `PREFIX` para um prefixo próprio. A instalação no sistema é via `.deb`:
 
 ```bash
 make install
-make install-system
 make uninstall
-make uninstall-system
+make package   # só para CLIs compilados — veja Desenvolvimento
+sudo dpkg -i dist/*.deb
 ```
 
 ## Uso
@@ -85,7 +86,8 @@ Overrides:
 coati/cmd/coati/         # Ponto de entrada CLI
 coati/internal/          # App, domain, services, adapters
 bin/                     # Binários compilados (ignorado pelo git)
-.make/                   # Scripts de build e instalação
+dist/                    # Pacotes .deb (ignorado pelo git)
+.make/                   # Scripts de build, instalação e empacotamento
 testdata/                # Fixtures de teste
 docs/                    # Guias de uso + GitHub Pages
 ```
@@ -101,13 +103,13 @@ Em runtime (só sistema):
 ## Desenvolvimento
 
 ```bash
-make build             # Compila o binário em bin/coati
-make test              # Executa todos os testes
-make quality           # Formata, verifica e executa o linter
-make install           # Instala o binário em ~/.local/bin
-make install-system    # Instala o binário em /usr/local/bin
-make uninstall         # Remove de ~/.local/bin
-make uninstall-system  # Remove de /usr/local/bin
+make build           # Compila o binário em bin/coati
+make test            # Executa todos os testes
+make quality         # Formata, verifica e executa o linter
+make install         # Instala o binário em ~/.local/bin
+make uninstall       # Remove de ~/.local/bin
+make package         # Gera o .deb em dist/ (binário em /usr/bin)
+make deb             # Atalho para package
 ```
 
 ## Contribuição

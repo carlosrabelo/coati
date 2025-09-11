@@ -2,7 +2,7 @@ MAKEFLAGS += --no-print-directory
 
 .DEFAULT_GOAL := help
 
-.PHONY: build clean fmt help install install-system lint quality test uninstall uninstall-system
+.PHONY: build clean deb fmt help install lint package quality test uninstall
 
 BINARY_NAME := coati
 
@@ -30,16 +30,16 @@ fmt: ## Format code
 quality: fmt lint ## Run all quality checks
 
 clean: ## Remove build artifacts
-	@./.make/clean.sh
+	@go clean
+	@rm -rf bin/
 
 install: ## Install to ~/.local/bin (requires prior make build)
 	@./.make/install.sh
 
-install-system: ## Install to /usr/local/bin (requires prior make build; sudo only for copy)
-	@SYSTEM=1 ./.make/install.sh
-
 uninstall: ## Remove from ~/.local/bin (sudo only if needed)
 	@./.make/uninstall.sh
 
-uninstall-system: ## Remove from /usr/local/bin (sudo only if needed)
-	@SYSTEM=1 ./.make/uninstall.sh
+package: ## Build a .deb into dist/ (requires prior make build)
+	@./.make/package.sh
+
+deb: package ## Alias for package

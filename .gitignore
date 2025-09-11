@@ -20,9 +20,11 @@ credentials.json
 # Directories
 bin/*
 !bin/.gitkeep
+dist/
 
 # Files
-# Note: do not ignore bare "coati" — it would hide the source tree coati/
+/coati
+!/coati/
 *.bkp
 *.exe
 *.exe~

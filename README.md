@@ -4,6 +4,7 @@ CLI that generates `/etc/hosts` and `~/.ssh/config` from a YAML definition store
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Go Version](https://img.shields.io/badge/Go-1.25%2B-blue.svg)](https://go.dev/)
+[![Release](https://img.shields.io/github/release/carlosrabelo/coati.svg)](https://github.com/carlosrabelo/coati/releases)
 
 ## Highlights
 
@@ -31,13 +32,13 @@ cd coati
 make build
 ```
 
-Install to `~/.local/bin` (default), or system-wide to `/usr/local/bin` (sudo only for the copy):
+Install to `~/.local/bin` (default), or set `PREFIX` for a custom prefix. System-wide install is via a `.deb`:
 
 ```bash
 make install
-make install-system
 make uninstall
-make uninstall-system
+make package   # compiled CLIs only — see Development
+sudo dpkg -i dist/*.deb
 ```
 
 ## Usage
@@ -85,7 +86,8 @@ Overrides:
 coati/cmd/coati/         # CLI entry point
 coati/internal/          # App, domain, services, adapters
 bin/                     # Compiled binaries (git-ignored)
-.make/                   # Build and install scripts
+dist/                    # .deb packages (git-ignored)
+.make/                   # Build, install, and package scripts
 testdata/                # Test fixtures
 docs/                    # User guides + GitHub Pages
 ```
@@ -101,13 +103,13 @@ Runtime (system-only):
 ## Development
 
 ```bash
-make build             # Compile binary to bin/coati
-make test              # Run all tests
-make quality           # Format, vet, and lint
-make install           # Install binary to ~/.local/bin
-make install-system    # Install binary to /usr/local/bin
-make uninstall         # Remove from ~/.local/bin
-make uninstall-system  # Remove from /usr/local/bin
+make build           # Compile binary to bin/coati
+make test            # Run all tests
+make quality         # Format, vet, and lint
+make install         # Install binary to ~/.local/bin
+make uninstall       # Remove from ~/.local/bin
+make package         # Build .deb into dist/ (binary at /usr/bin)
+make deb             # Alias for package
 ```
 
 ## Contributing
