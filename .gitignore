@@ -1,0 +1,77 @@
+# ============================================================================
+# SECRETS
+# ============================================================================
+
+# Directories
+.nexor/
+
+# Files
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+credentials.json
+
+# ============================================================================
+# GO
+# ============================================================================
+
+# Directories
+bin/*
+data/src/*
+
+# Files
+data/gen/etc/*
+data/gen/ssh/*
+*.bkp
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+coverage.out
+coverage.html
+
+# ============================================================================
+# EDITORS
+# ============================================================================
+
+# Directories
+.vscode/
+.idea/
+
+# Files
+*.swp
+*.swo
+*~
+
+# ============================================================================
+# OS
+# ============================================================================
+
+# Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ============================================================================
+# EXCEPTIONS (preserve these)
+# ============================================================================
+
+# Binary directory — preserve placeholder
+!bin/.gitkeep
+
+# Source directory — preserve placeholder
+!data/src/.gitkeep
+
+# Output subdirectories — preserve placeholders
+!data/gen/etc/.gitkeep
+!data/gen/ssh/.gitkeep
