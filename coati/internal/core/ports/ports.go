@@ -1,6 +1,10 @@
 package ports
 
-import "os"
+import (
+	"os"
+
+	"coati/coati/internal/core/domain"
+)
 
 type FileReader interface {
 	ReadFile(path string) ([]byte, error)
@@ -24,4 +28,12 @@ type GistFetcher interface {
 
 type GistPusher interface {
 	Push(gistID, token, gistFile string, content []byte) error
+}
+
+type HostsParser interface {
+	ParseHosts(content []byte) ([]domain.HostEntry, error)
+}
+
+type SSHParser interface {
+	ParseSSHConfig(content []byte) ([]domain.SSHConfig, error)
 }

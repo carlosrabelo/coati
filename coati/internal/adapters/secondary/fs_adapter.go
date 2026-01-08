@@ -24,4 +24,3 @@ func (a *FSAdapter) WriteFile(path string, content []byte, perm os.FileMode) err
 	}
 	return os.WriteFile(path, content, perm)
 }
-

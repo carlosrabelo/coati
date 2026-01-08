@@ -66,9 +66,13 @@ func (cm *ConfigManager) SaveConfig(gistID, token string) error {
 		return fmt.Errorf("no gist-id or token provided to save")
 	}
 
-	newConfig := domain.AppConfig{
-		GistID:      gistID,
-		GitHubToken: token,
+	// Load existing config first to preserve other settings (like allowed_hooks)
+	newConfig, _ := cm.LoadConfig()
+	if gistID != "" {
+		newConfig.GistID = gistID
+	}
+	if token != "" {
+		newConfig.GitHubToken = token
 	}
 
 	data, err := yaml.Marshal(newConfig)

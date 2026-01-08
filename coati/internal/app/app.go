@@ -31,6 +31,9 @@ type Config struct {
 	Merge             bool
 	Verbose           bool
 	ForceRefresh      bool
+	Backup            bool
+	AllowUnsafeHooks  bool
+	AllowedHooks      []string
 }
 
 type Application struct {
@@ -82,6 +85,22 @@ func (app *Application) Run() error {
 	if app.cfg.GitHubToken == "" {
 		app.cfg.GitHubToken = os.Getenv("GITHUB_TOKEN")
 	}
+
+	// Merge allowed hooks from CLI and local AppConfig
+	allowedHooks := app.cfg.AllowedHooks
+	for _, h := range appConfig.AllowedHooks {
+		found := false
+		for _, existing := range allowedHooks {
+			if existing == h {
+				found = true
+				break
+			}
+		}
+		if !found {
+			allowedHooks = append(allowedHooks, h)
+		}
+	}
+	app.cfg.AllowedHooks = allowedHooks
 
 	// 3. Handle Save Config
 	if app.cfg.SaveConfig {
@@ -172,6 +191,15 @@ func (app *Application) Run() error {
 		printFileDiff(app.cfg.OutputConfigFile, app.cfg.OutputConfigFile, sshData)
 		fmt.Println("\n=== End of Check ===")
 		return nil
+	}
+
+	if app.cfg.Backup {
+		if err := app.createBackup(app.cfg.OutputHostsFile); err != nil {
+			app.logger.Warn("Failed to create backup for hosts file", "path", app.cfg.OutputHostsFile, "error", err)
+		}
+		if err := app.createBackup(app.cfg.OutputConfigFile); err != nil {
+			app.logger.Warn("Failed to create backup for SSH config file", "path", app.cfg.OutputConfigFile, "error", err)
+		}
 	}
 
 	app.logger.Info("Writing hosts file", "path", app.cfg.OutputHostsFile)
@@ -289,4 +317,28 @@ func (app *Application) resolveTemplate() string {
 		return templates.HostsTemplate
 	}
 	return string(data)
+}
+
+func (app *Application) createBackup(path string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("failed to stat file for backup: %w", err)
+	}
+
+	backupPath := path + ".bak"
+	app.logger.Debug("Creating backup copy", "path", path, "backupPath", backupPath)
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("failed to read file for backup: %w", err)
+	}
+
+	if err := writeAtomic(backupPath, data, info.Mode().Perm()); err != nil {
+		return fmt.Errorf("failed to write backup file: %w", err)
+	}
+
+	return nil
 }

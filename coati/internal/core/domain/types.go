@@ -15,8 +15,9 @@ type GlobalConfig struct {
 }
 
 type AppConfig struct {
-	GistID      string `yaml:"gist_id"`
-	GitHubToken string `yaml:"github_token"`
+	GistID       string   `yaml:"gist_id"`
+	GitHubToken  string   `yaml:"github_token"`
+	AllowedHooks []string `yaml:"allowed_hooks,omitempty"`
 }
 
 type CNAMEConfig struct {

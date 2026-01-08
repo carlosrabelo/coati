@@ -19,19 +19,32 @@ var allowedHookCommands = map[string]bool{
 	"httpd":     true,
 }
 
-func validateHookCommand(hook string) error {
+func (app *Application) validateHookCommand(hook string) error {
 	parts := strings.Fields(hook)
 	if len(parts) == 0 {
 		return nil
 	}
 
-	if strings.ContainsAny(parts[0], "/\\") {
+	if strings.ContainsAny(parts[0], "/\\") && !app.cfg.AllowUnsafeHooks {
 		return fmt.Errorf("hook command must be a command name only, not a path: %s", parts[0])
 	}
 
 	commandName := parts[0]
-	if !allowedHookCommands[commandName] {
-		return fmt.Errorf("command not allowed: %s (allowed commands: %v)", commandName, getAllowedCommandNames())
+	if !app.cfg.AllowUnsafeHooks {
+		isAllowed := allowedHookCommands[commandName]
+		if !isAllowed {
+			// Check custom allowed hooks
+			for _, allowed := range app.cfg.AllowedHooks {
+				if allowed == commandName {
+					isAllowed = true
+					break
+				}
+			}
+		}
+
+		if !isAllowed {
+			return fmt.Errorf("command not allowed: %s (allowed commands: %v)", commandName, app.getAllowedCommandNames())
+		}
 	}
 
 	for _, part := range parts[1:] {
@@ -43,9 +56,12 @@ func validateHookCommand(hook string) error {
 	return nil
 }
 
-func getAllowedCommandNames() []string {
-	names := make([]string, 0, len(allowedHookCommands))
+func (app *Application) getAllowedCommandNames() []string {
+	names := make([]string, 0, len(allowedHookCommands)+len(app.cfg.AllowedHooks))
 	for cmd := range allowedHookCommands {
+		names = append(names, cmd)
+	}
+	for _, cmd := range app.cfg.AllowedHooks {
 		names = append(names, cmd)
 	}
 	return names
@@ -55,7 +71,7 @@ func getAllowedCommandNames() []string {
 // A validation failure aborts before any hook runs.
 func (app *Application) runHooks(hooks []string) error {
 	for _, hook := range hooks {
-		if err := validateHookCommand(hook); err != nil {
+		if err := app.validateHookCommand(hook); err != nil {
 			app.logger.Error("Hook validation failed", "command", hook, "error", err)
 			return fmt.Errorf("hook validation failed: %w", err)
 		}

@@ -20,7 +20,6 @@ func (m *MockFileReaderForHosts) ReadFile(path string) ([]byte, error) {
 	return args.Get(0).([]byte), args.Error(1)
 }
 
-
 func TestHostsGenerator_GenerateHosts_Valid(t *testing.T) {
 	// Setup
 	config := domain.GlobalConfig{

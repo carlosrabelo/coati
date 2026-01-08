@@ -40,7 +40,7 @@ func extractOrWrapOriginal(existing string) string {
 	endIdx := strings.Index(existing, markerEndOriginal)
 
 	if beginIdx >= 0 && endIdx > beginIdx {
-		return strings.TrimSpace(existing[beginIdx:endIdx+len(markerEndOriginal)])
+		return strings.TrimSpace(existing[beginIdx : endIdx+len(markerEndOriginal)])
 	}
 
 	trimmed := strings.TrimSpace(existing)

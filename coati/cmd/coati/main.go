@@ -48,6 +48,9 @@ func main() {
 	applyCmd.Flags().BoolVar(&cfg.Merge, "merge", false, "Preserve existing file content in ORIGINAL section, manage COATI section only")
 	applyCmd.Flags().BoolVarP(&cfg.Verbose, "verbose", "v", false, "Enable verbose logging")
 	applyCmd.Flags().BoolVarP(&cfg.ForceRefresh, "force-refresh", "f", false, "Force refresh of Gist configuration (bypass cache)")
+	applyCmd.Flags().BoolVar(&cfg.Backup, "backup", true, "Create a backup (.bak) of files before writing")
+	applyCmd.Flags().BoolVar(&cfg.AllowUnsafeHooks, "allow-unsafe-hooks", false, "Bypass command allowlist for post-hooks (potentially unsafe)")
+	applyCmd.Flags().StringSliceVar(&cfg.AllowedHooks, "allowed-hooks", []string{}, "Comma-separated list of additional allowed commands for post-hooks")
 
 	var rootCmd = &cobra.Command{
 		Use:   "coati",
@@ -59,6 +62,7 @@ func main() {
 	rootCmd.AddCommand(completionCmd)
 	rootCmd.AddCommand(pullCmd)
 	rootCmd.AddCommand(pushCmd)
+	rootCmd.AddCommand(importCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)

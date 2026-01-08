@@ -7,6 +7,8 @@ import (
 )
 
 func TestValidateHookCommand_Valid(t *testing.T) {
+	app := &Application{}
+
 	tests := []struct {
 		name    string
 		hook    string
@@ -56,7 +58,7 @@ func TestValidateHookCommand_Valid(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateHookCommand(tt.hook)
+			err := app.validateHookCommand(tt.hook)
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -66,9 +68,47 @@ func TestValidateHookCommand_Valid(t *testing.T) {
 	}
 }
 
+func TestValidateHookCommand_UnsafeAndCustom(t *testing.T) {
+	// Test Custom Allowed Command
+	appCustom := &Application{
+		cfg: Config{
+			AllowedHooks: []string{"dnsmasq", "custom-script"},
+		},
+	}
+
+	err := appCustom.validateHookCommand("dnsmasq reload")
+	assert.NoError(t, err)
+
+	err = appCustom.validateHookCommand("custom-script run")
+	assert.NoError(t, err)
+
+	err = appCustom.validateHookCommand("rm -rf /")
+	assert.Error(t, err)
+
+	// Test Unsafe Hooks
+	appUnsafe := &Application{
+		cfg: Config{
+			AllowUnsafeHooks: true,
+		},
+	}
+
+	err = appUnsafe.validateHookCommand("rm -rf /")
+	assert.NoError(t, err)
+
+	// Injection is still blocked even with unsafe hooks enabled
+	err = appUnsafe.validateHookCommand("rm -rf /; touch /hack")
+	assert.Error(t, err)
+}
+
 func TestGetAllowedCommandNames(t *testing.T) {
-	names := getAllowedCommandNames()
+	app := &Application{
+		cfg: Config{
+			AllowedHooks: []string{"custom-cmd"},
+		},
+	}
+	names := app.getAllowedCommandNames()
 	assert.NotEmpty(t, names)
 	assert.Contains(t, names, "systemctl")
 	assert.Contains(t, names, "docker")
+	assert.Contains(t, names, "custom-cmd")
 }

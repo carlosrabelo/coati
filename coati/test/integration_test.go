@@ -86,3 +86,42 @@ func TestIntegration_EndToEndGeneration(t *testing.T) {
 	// Existing SSH verification - SHOULD NOT EXIST ANYMORE
 	assert.NotContains(t, sshStr, "Host existing")
 }
+
+func TestIntegration_ImportAndGenerate(t *testing.T) {
+	// 1. Mock inputs
+	hostsInput := []byte("192.168.200.20 server01 alias-srv # Server comment\n")
+	sshInput := []byte("Host server01\n  HostName 192.168.200.20\n  User root\n  Port 2222\n")
+
+	// 2. Run Importer
+	hostsParser := secondary.NewHostFileParser()
+	sshParser := secondary.NewSSHFileParser()
+	importer := services.NewImporter(hostsParser, sshParser)
+
+	config, err := importer.Import(hostsInput, sshInput)
+	require.NoError(t, err)
+
+	// 3. Generate from imported configuration
+	fsAdapter := secondary.NewFSAdapter()
+	hostsGen := services.NewHostsGenerator(config, fsAdapter, templates.HostsTemplate)
+	sshGen := services.NewSSHGenerator(config)
+
+	hostsContent, err := hostsGen.GenerateHosts()
+	require.NoError(t, err)
+
+	sshContent, err := sshGen.GenerateSSHConfig()
+	require.NoError(t, err)
+
+	// 4. Verify generated content
+	hostsStr := string(hostsContent)
+	sshStr := string(sshContent)
+
+	assert.Contains(t, hostsStr, "192.168.200.20")
+	assert.Contains(t, hostsStr, "server01")
+	assert.Contains(t, hostsStr, "alias-srv")
+	assert.Contains(t, hostsStr, "# Server comment")
+
+	assert.Contains(t, sshStr, "Host server01 alias-srv")
+	assert.Contains(t, sshStr, "HostName 192.168.200.20")
+	assert.Contains(t, sshStr, "User root")
+	assert.Contains(t, sshStr, "Port 2222")
+}
