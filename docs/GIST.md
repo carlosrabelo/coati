@@ -72,8 +72,8 @@ Map an IP to a domain. This helps when you want to look up a domain by IP (adds 
 
 ```yaml
 ptrs:
-  - ip: "200.0.35.148"
-    domain: "p148.venkon.org"
+  - ip: "192.168.1.10"
+    domain: "web-01.example.com"
 ```
 
 ## 5. Simplified Mode
@@ -81,7 +81,15 @@ List of hostnames that should NOT have extra Aliases/CNAMEs/PTRs processed. Usef
 
 ```yaml
 simplified_mode_hosts:
-  - "m492721"
+  - "db-prod"
+```
+
+## 6. Post Hooks
+List of commands to be executed after files are written successfully. For security reasons, commands are restricted to a pre-approved allowlist (e.g., systemctl, docker, kubectl, service, nginx, apache2, httpd) unless explicitly bypassed by CLI flags.
+
+```yaml
+post_hooks:
+  - "systemctl restart dnsmasq"
 ```
 
 ## Full Example
@@ -111,4 +119,7 @@ ptrs:
 
 simplified_mode_hosts:
   - "web-02"
+
+post_hooks:
+  - "systemctl restart dnsmasq"
 ```
