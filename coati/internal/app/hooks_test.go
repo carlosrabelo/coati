@@ -54,6 +54,16 @@ func TestValidateHookCommand_Valid(t *testing.T) {
 			hook:    "systemctl status nginx | grep running",
 			wantErr: true,
 		},
+		{
+			name:    "valid command with quoted argument containing spaces",
+			hook:    "systemctl restart \"my service\"",
+			wantErr: false,
+		},
+		{
+			name:    "invalid hook - unclosed quote",
+			hook:    "systemctl restart \"my service",
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {

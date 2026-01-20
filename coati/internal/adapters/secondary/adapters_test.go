@@ -53,15 +53,15 @@ func TestSSHFileParser_ParseSSHConfig(t *testing.T) {
 	parser := NewSSHFileParser()
 	input := []byte(`
 Host web
-	HostName 192.168.1.10
+	HostName = 192.168.1.10
 	User admin
 	Port 2222
-	IdentityFile ~/.ssh/id_web
+	IdentityFile "~/.ssh/id_web"
 
 Host db
 	HostName 10.0.0.5
 	User root
-	StrictHostKeyChecking no
+	StrictHostKeyChecking = no
 `)
 
 	configs, err := parser.ParseSSHConfig(input)

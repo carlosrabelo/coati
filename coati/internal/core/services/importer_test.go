@@ -100,3 +100,48 @@ func TestImporter_Import_EmptyFiles(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, config.Hosts)
 }
+
+func TestImporter_Import_DuplicateIPs(t *testing.T) {
+	hostsContent := []byte(`
+10.13.250.253 tail1
+10.13.250.253 tail2
+`)
+
+	sshContent := []byte(`
+Host tail1
+	HostName 10.13.250.253
+	Port 22
+
+Host tail2
+	HostName 10.13.250.253
+	Port 2222
+`)
+
+	hostsParser := secondary.NewHostFileParser()
+	sshParser := secondary.NewSSHFileParser()
+	importer := NewImporter(hostsParser, sshParser)
+
+	config, err := importer.Import(hostsContent, sshContent)
+	require.NoError(t, err)
+
+	require.Len(t, config.Hosts, 2)
+
+	var tail1, tail2 *domain.HostConfig
+	for i := range config.Hosts {
+		if config.Hosts[i].Hostname == "tail1" {
+			tail1 = &config.Hosts[i]
+		}
+		if config.Hosts[i].Hostname == "tail2" {
+			tail2 = &config.Hosts[i]
+		}
+	}
+
+	require.NotNil(t, tail1)
+	require.NotNil(t, tail2)
+
+	assert.Equal(t, "10.13.250.253", tail1.IP)
+	assert.Equal(t, 22, tail1.Port)
+
+	assert.Equal(t, "10.13.250.253", tail2.IP)
+	assert.Equal(t, 2222, tail2.Port)
+}

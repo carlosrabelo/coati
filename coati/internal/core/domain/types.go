@@ -2,7 +2,6 @@ package domain
 
 import (
 	"fmt"
-	"net"
 )
 
 type GlobalConfig struct {
@@ -89,18 +88,11 @@ func (c *GlobalConfig) Validate() error {
 		}
 	}
 	seenHostnames := make(map[string]bool)
-	seenIPs := make(map[string]bool)
 	for i, h := range c.Hosts {
 		if seenHostnames[h.Hostname] {
 			return fmt.Errorf("host[%d]: duplicate hostname %q", i, h.Hostname)
 		}
 		seenHostnames[h.Hostname] = true
-		if net.ParseIP(h.IP) != nil {
-			if seenIPs[h.IP] {
-				return fmt.Errorf("host[%d]: duplicate ip %q", i, h.IP)
-			}
-			seenIPs[h.IP] = true
-		}
 	}
 	if c.Defaults.Port != 0 && (c.Defaults.Port < 1 || c.Defaults.Port > 65535) {
 		return fmt.Errorf("invalid default port: %d", c.Defaults.Port)

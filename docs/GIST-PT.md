@@ -2,7 +2,7 @@
 
 O Coati usa uma estrutura YAML única para definir sua infraestrutura. Este conteúdo deve ser armazenado em seu GitHub Gist privado.
 
-> **Nota**: O nome do arquivo dentro do Gist (ex.: `hosts.yaml`) não é relevante; o Coati lê o primeiro arquivo que encontrar no Gist. Recomenda-se usar a extensão `.yaml` ou `.yml` para realce de sintaxe.
+> **Nota**: O nome do arquivo dentro do Gist (ex.: `hosts.yaml`) não é relevante; o Coati lê o primeiro arquivo ordenado alfabeticamente no Gist. Recomenda-se usar a extensão `.yaml` ou `.yml` para realce de sintaxe.
 
 ## Visão Geral da Estrutura
 
@@ -12,7 +12,7 @@ A configuração é dividida em três seções principais:
 3. **cnames**: Aliases que apontam para outros hostnames.
 
 ## 1. Defaults
-Essas configurações se aplicam ao bloco `Host *` no SSH config gerado, funcionando como valores padrão.
+Estas configurações se aplicam ao bloco `Host *` no SSH config gerado, funcionando como valores padrão.
 
 ```yaml
 defaults:
@@ -29,7 +29,7 @@ Esta lista define seus endpoints reais. Cada entrada gera uma linha no `/etc/hos
 
 ```yaml
 hosts:
-  - ip: "10.0.0.50"              # [Obrigatório] Endereço IP
+  - ip: "10.0.0.50"              # [Obrigatório] Endereço IP ou Nome de Domínio (múltiplas entradas podem compartilhar o mesmo IP/domínio)
     hostname: "db-prod"          # [Obrigatório] Hostname canônico
     
     # [Opcional] Lista de aliases.

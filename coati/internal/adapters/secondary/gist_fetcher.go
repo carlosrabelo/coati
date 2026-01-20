@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"time"
 )
 
@@ -59,9 +60,15 @@ func (g *GistFetcher) Fetch(gistID, token, gistFile string) ([]byte, error) {
 		return []byte(f.Content), nil
 	}
 
-	for _, file := range gist.Files {
-		return []byte(file.Content), nil
+	if len(gist.Files) == 0 {
+		return nil, fmt.Errorf("gist contains no files")
 	}
 
-	return nil, fmt.Errorf("gist contains no files")
+	var fileNames []string
+	for name := range gist.Files {
+		fileNames = append(fileNames, name)
+	}
+	sort.Strings(fileNames)
+
+	return []byte(gist.Files[fileNames[0]].Content), nil
 }

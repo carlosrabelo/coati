@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"time"
 )
 
@@ -84,8 +85,15 @@ func (g *GistPusher) firstFileName(gistID, token string) (string, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&gist); err != nil {
 		return "", fmt.Errorf("failed to decode response: %w", err)
 	}
-	for name := range gist.Files {
-		return name, nil
+	if len(gist.Files) == 0 {
+		return "", fmt.Errorf("gist contains no files")
 	}
-	return "", fmt.Errorf("gist contains no files")
+
+	var fileNames []string
+	for name := range gist.Files {
+		fileNames = append(fileNames, name)
+	}
+	sort.Strings(fileNames)
+
+	return fileNames[0], nil
 }

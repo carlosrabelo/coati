@@ -19,8 +19,67 @@ var allowedHookCommands = map[string]bool{
 	"httpd":     true,
 }
 
+func splitCommand(line string) ([]string, error) {
+	var args []string
+	var current strings.Builder
+	inDoubleQuotes := false
+	inSingleQuotes := false
+	escaped := false
+
+	for i := 0; i < len(line); i++ {
+		r := line[i]
+
+		if escaped {
+			current.WriteByte(r)
+			escaped = false
+			continue
+		}
+
+		if r == '\\' && !inSingleQuotes {
+			escaped = true
+			continue
+		}
+
+		if r == '"' && !inSingleQuotes {
+			inDoubleQuotes = !inDoubleQuotes
+			continue
+		}
+
+		if r == '\'' && !inDoubleQuotes {
+			inSingleQuotes = !inSingleQuotes
+			continue
+		}
+
+		if (r == ' ' || r == '\t' || r == '\n' || r == '\r') && !inDoubleQuotes && !inSingleQuotes {
+			if current.Len() > 0 {
+				args = append(args, current.String())
+				current.Reset()
+			}
+			continue
+		}
+
+		current.WriteByte(r)
+	}
+
+	if inDoubleQuotes || inSingleQuotes {
+		return nil, fmt.Errorf("unclosed quotes in command")
+	}
+	if escaped {
+		return nil, fmt.Errorf("trailing backslash in command")
+	}
+
+	if current.Len() > 0 {
+		args = append(args, current.String())
+	}
+
+	return args, nil
+}
+
 func (app *Application) validateHookCommand(hook string) error {
-	parts := strings.Fields(hook)
+	parts, err := splitCommand(hook)
+	if err != nil {
+		return fmt.Errorf("failed to parse hook: %w", err)
+	}
 	if len(parts) == 0 {
 		return nil
 	}
@@ -77,7 +136,7 @@ func (app *Application) runHooks(hooks []string) error {
 		}
 	}
 	for _, hook := range hooks {
-		parts := strings.Fields(hook)
+		parts, _ := splitCommand(hook)
 		if len(parts) == 0 {
 			continue
 		}

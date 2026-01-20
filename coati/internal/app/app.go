@@ -247,13 +247,16 @@ func (app *Application) resolveInputPath() (string, func(), error) {
 	if err != nil {
 		return "", noop, fmt.Errorf("failed to create temp file: %w", err)
 	}
-	cleanup := func() { os.Remove(tmpFile.Name()) }
+	cleanup := func() {
+		_ = tmpFile.Close()
+		_ = os.Remove(tmpFile.Name())
+	}
 
 	if _, err := tmpFile.Write(content); err != nil {
 		cleanup()
 		return "", noop, fmt.Errorf("failed to write temp file: %w", err)
 	}
-	tmpFile.Close()
+	_ = tmpFile.Close()
 
 	app.logger.Info("Using Gist configuration", "gist_id", app.cfg.GistID, "temp_file", tmpFile.Name())
 	return tmpFile.Name(), cleanup, nil

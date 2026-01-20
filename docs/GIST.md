@@ -2,7 +2,7 @@
 
 Coati uses a single YAML structure to define your infrastructure. This content should be stored in your private GitHub Gist.
 
-> **Note**: The filename inside the Gist (e.g., `hosts.yaml`) does not strictly matter; Coati will read the first file it finds in the Gist. However, using `.yaml` or `.yml` extension is recommended for syntax highlighting.
+> **Note**: The filename inside the Gist (e.g., `hosts.yaml`) does not strictly matter; Coati will read the first file sorted alphabetically in the Gist. However, using `.yaml` or `.yml` extension is recommended for syntax highlighting.
 
 ## Structure Overview
 
@@ -29,7 +29,7 @@ This list defines your actual endpoints. Each entry generates a line in `/etc/ho
 
 ```yaml
 hosts:
-  - ip: "10.0.0.50"              # [Required] IP Address
+  - ip: "10.0.0.50"              # [Required] IP Address or Domain Name (multiple entries can share the same IP/domain)
     hostname: "db-prod"          # [Required] Canonical Hostname
     
     # [Optional] List of aliases. 

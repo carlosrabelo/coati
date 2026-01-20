@@ -71,13 +71,35 @@ func (p *SSHFileParser) ParseSSHConfig(content []byte) ([]domain.SSHConfig, erro
 			continue
 		}
 
-		parts := strings.Fields(line)
-		if len(parts) < 2 {
+		var originalKey string
+		var key, value string
+		if idx := strings.Index(line, "="); idx != -1 {
+			firstWord := strings.Fields(line[:idx])
+			if len(firstWord) == 1 {
+				originalKey = firstWord[0]
+				key = strings.ToLower(originalKey)
+				value = strings.TrimSpace(line[idx+1:])
+			}
+		}
+		if key == "" {
+			parts := strings.Fields(line)
+			if len(parts) < 2 {
+				continue
+			}
+			originalKey = parts[0]
+			key = strings.ToLower(originalKey)
+			value = strings.Join(parts[1:], " ")
+		}
+
+		if value == "" {
 			continue
 		}
 
-		key := strings.ToLower(parts[0])
-		value := strings.Join(parts[1:], " ")
+		// Trim surrounding quotes if present
+		if (strings.HasPrefix(value, "\"") && strings.HasSuffix(value, "\"")) ||
+			(strings.HasPrefix(value, "'") && strings.HasSuffix(value, "'")) {
+			value = value[1 : len(value)-1]
+		}
 
 		if key == "host" {
 			if current != nil {
@@ -106,7 +128,7 @@ func (p *SSHFileParser) ParseSSHConfig(content []byte) ([]domain.SSHConfig, erro
 		case "identityfile":
 			current.IdentityFile = value
 		default:
-			current.Options[parts[0]] = value
+			current.Options[originalKey] = value
 		}
 	}
 

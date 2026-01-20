@@ -68,30 +68,9 @@ func (im *Importer) Import(hostsContent []byte, sshContent []byte) (domain.Globa
 			continue
 		}
 
-		// Check if IP is already in our list (to avoid duplicate IP validation failures)
-		if idx, exists := ipMap[entry.IP]; exists {
-			// Merge aliases and comments
-			existing := &config.Hosts[idx]
-			if entry.Comment != "" {
-				if existing.Comment != "" {
-					existing.Comment += "; " + entry.Comment
-				} else {
-					existing.Comment = entry.Comment
-				}
-			}
-			// Add new aliases
-			for _, alias := range entry.Aliases {
-				if !containsCaseInsensitive(existing.Aliases, alias) && strings.ToLower(alias) != strings.ToLower(existing.Hostname) {
-					existing.Aliases = append(existing.Aliases, alias)
-					nameMap[strings.ToLower(alias)] = idx
-				}
-			}
-			continue
-		}
-
 		// Check if Hostname is already in our list
 		if idx, exists := nameMap[strings.ToLower(entry.Hostname)]; exists {
-			// Merge or update IP
+			// Merge aliases and comments into existing host config
 			existing := &config.Hosts[idx]
 			if existing.IP == "" {
 				existing.IP = entry.IP
@@ -102,6 +81,12 @@ func (im *Importer) Import(hostsContent []byte, sshContent []byte) (domain.Globa
 					existing.Comment += "; " + entry.Comment
 				} else {
 					existing.Comment = entry.Comment
+				}
+			}
+			for _, alias := range entry.Aliases {
+				if !containsCaseInsensitive(existing.Aliases, alias) && strings.ToLower(alias) != strings.ToLower(existing.Hostname) {
+					existing.Aliases = append(existing.Aliases, alias)
+					nameMap[strings.ToLower(alias)] = idx
 				}
 			}
 			continue
@@ -148,26 +133,13 @@ func (im *Importer) Import(hostsContent []byte, sshContent []byte) (domain.Globa
 			continue
 		}
 
-		// Try to match this SSH config to an existing HostConfig.
-		// Match criteria:
-		// - HostName field matches HostConfig.IP
-		// - Or any pattern in sc.Host matches HostConfig.Hostname or HostConfig.Aliases
+		// Try to match this SSH config to an existing HostConfig by host patterns
 		var targetIdx = -1
 
-		// Search by HostName (IP) first
-		if sc.HostName != "" && net.ParseIP(sc.HostName) != nil {
-			if idx, ok := ipMap[sc.HostName]; ok {
+		for _, pat := range patterns {
+			if idx, ok := nameMap[strings.ToLower(pat)]; ok {
 				targetIdx = idx
-			}
-		}
-
-		// If not found, search by host patterns
-		if targetIdx == -1 {
-			for _, pat := range patterns {
-				if idx, ok := nameMap[strings.ToLower(pat)]; ok {
-					targetIdx = idx
-					break
-				}
+				break
 			}
 		}
 

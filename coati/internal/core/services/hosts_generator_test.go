@@ -260,3 +260,25 @@ func TestHostsGenerator_GenerateHosts_ByIP(t *testing.T) {
 
 	assert.True(t, idxZHost < idxAHost, "z-host (10.0.0.1) should be before a-host (10.0.0.2) because of IP sorting")
 }
+
+func TestHostsGenerator_GenerateHosts_DuplicateIPs(t *testing.T) {
+	config := domain.GlobalConfig{
+		Hosts: []domain.HostConfig{
+			{IP: "10.13.250.253", Hostname: "tail1"},
+			{IP: "10.13.250.253", Hostname: "tail2"},
+		},
+	}
+
+	mockReader := new(MockFileReaderForHosts)
+	mockReader.On("ReadFile", "/etc/hostname").Return([]byte("my-computer"), nil)
+
+	generator := NewHostsGenerator(config, mockReader, "")
+
+	result, err := generator.GenerateHosts()
+	assert.NoError(t, err)
+	output := string(result)
+
+	// Both should be generated as separate lines
+	assert.Regexp(t, `10\.13\.250\.253\s+tail1`, output)
+	assert.Regexp(t, `10\.13\.250\.253\s+tail2`, output)
+}

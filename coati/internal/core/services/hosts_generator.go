@@ -43,10 +43,11 @@ func (g *HostsGenerator) GenerateHosts() ([]byte, error) {
 
 	lastLineWasBlank := g.writeTemplate(w, hostname)
 
-	seen := map[string]bool{
+	seenIPs := map[string]bool{
 		"127.0.0.1": true, "127.0.1.1": true, "::1": true,
 		"fe00::0": true, "ff00::0": true, "ff02::1": true, "ff02::2": true,
 	}
+	seenPairs := make(map[string]bool)
 
 	// Sort a copy of hosts by IP (network byte order) to avoid mutating the shared config slice.
 	hosts := make([]domain.HostConfig, len(g.config.Hosts))
@@ -85,11 +86,15 @@ func (g *HostsGenerator) GenerateHosts() ([]byte, error) {
 			continue
 		}
 		// Only add to /etc/hosts if it is a valid IP
-		if net.ParseIP(h.IP) == nil || seen[h.IP] {
+		if net.ParseIP(h.IP) == nil || seenIPs[h.IP] {
+			continue
+		}
+		pairKey := h.IP + "\t" + h.Hostname
+		if seenPairs[pairKey] {
 			continue
 		}
 		writeHostEntry(w, h.IP, h.Hostname, g.buildAliases(h, simpleMode, ptrMap), h.Comment)
-		seen[h.IP] = true
+		seenPairs[pairKey] = true
 	}
 
 	w.Flush()
