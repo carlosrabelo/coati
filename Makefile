@@ -16,23 +16,23 @@ help: ## Show available targets
 		| awk 'BEGIN {FS = ":.*## "} {printf "  %-15s %s\n", $$1, $$2}'
 
 build: ## Build the project
-	@./make/build.sh
+	@./.make/build.sh
 
 test: ## Run tests
-	@./make/test.sh
+	@./.make/test.sh
 
 apply: build ## Generate and apply hosts and SSH config to the system
 	@./$(BUILD_DIR)/$(BINARY_NAME) process -f
-	@./make/update.sh
+	@./.make/update.sh
 
 clean: ## Clean build artifacts
-	@./make/clean.sh
+	@./.make/clean.sh
 
 install: build ## Install the binary
-	@./make/install.sh
+	@./.make/install.sh
 
 uninstall: ## Uninstall the binary
-	@./make/uninstall.sh
+	@./.make/uninstall.sh
 
 lint: ## Run linter
 	@go vet ./...

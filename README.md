@@ -11,7 +11,7 @@ CLI that generates `/etc/hosts` and `~/.ssh/config` from a YAML definition store
 - Automatic file backups with permission preservation
 - Pull config from a private GitHub Gist; push local changes back with `coati push`
 - Caches Gist responses locally to reduce network calls
-- Strict validation rejects duplicate hostnames and IPs before writing any file
+- Strict validation rejects duplicate hostnames before writing any file
 - Merge mode preserves existing file content in named `# BEGIN ORIGINAL` sections
 - Check mode shows a unified diff before any file is written
 - Dry-run mode previews generated content without touching disk
@@ -74,7 +74,7 @@ coati/
   internal/core/ports/      # Interfaces
   internal/core/services/   # Business logic (generators, cache, config)
   internal/templates/       # Embedded default templates
-make/                       # Build and installation scripts
+.make/                      # Build and installation scripts
 ```
 
 ## Development

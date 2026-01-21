@@ -11,7 +11,7 @@ CLI que gera `/etc/hosts` e `~/.ssh/config` a partir de uma definição YAML arm
 - Backups automáticos dos arquivos modificados preservando as permissões originais
 - Baixe a config de um GitHub Gist privado; envie alterações locais de volta com `coati push`
 - Armazena respostas do Gist localmente para reduzir chamadas de rede
-- Validação rigorosa rejeita hostnames e IPs duplicados antes de escrever qualquer arquivo
+- Validação rigorosa rejeita hostnames duplicados antes de escrever qualquer arquivo
 - Modo merge preserva o conteúdo existente em seções nomeadas `# BEGIN ORIGINAL`
 - Modo check exibe um diff unificado antes de qualquer arquivo ser escrito
 - Modo dry-run visualiza o conteúdo gerado sem tocar o disco
@@ -74,7 +74,7 @@ coati/
   internal/core/ports/      # Interfaces
   internal/core/services/   # Lógica de negócio (geradores, cache, config)
   internal/templates/       # Templates padrão embutidos
-make/                       # Scripts de build e instalação
+.make/                      # Scripts de build e instalação
 ```
 
 ## Desenvolvimento

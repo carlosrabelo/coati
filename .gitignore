@@ -19,11 +19,16 @@ credentials.json
 
 # Directories
 bin/*
+!bin/.gitkeep
 data/src/*
+!data/src/.gitkeep
+data/gen/etc/*
+!data/gen/etc/.gitkeep
+data/gen/ssh/*
+!data/gen/ssh/.gitkeep
 
 # Files
-data/gen/etc/*
-data/gen/ssh/*
+coati
 *.bkp
 *.exe
 *.exe~
@@ -61,17 +66,3 @@ coverage.html
 .Trashes
 ehthumbs.db
 Thumbs.db
-
-# ============================================================================
-# EXCEPTIONS (preserve these)
-# ============================================================================
-
-# Binary directory — preserve placeholder
-!bin/.gitkeep
-
-# Source directory — preserve placeholder
-!data/src/.gitkeep
-
-# Output subdirectories — preserve placeholders
-!data/gen/etc/.gitkeep
-!data/gen/ssh/.gitkeep
