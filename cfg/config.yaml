@@ -1,0 +1,18 @@
+# Default configuration for Coati
+
+defaults:
+  user: ubuntu
+  port: 22
+  identity_file: ~/.ssh/id_rsa
+
+hosts:
+  - hostname: web-prod
+    ip: 192.168.1.10
+    aliases: [www, portal]
+    user: admin
+
+  - hostname: db-prod
+    ip: 192.168.1.20
+
+post_hooks:
+  - "sudo systemctl restart dnsmasq"
