@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"coati/internal/app"
+	"coati/coati/internal/app"
 )
 
 func main() {

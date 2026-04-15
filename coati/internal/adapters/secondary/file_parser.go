@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"coati/internal/core/domain"
+	"coati/coati/internal/core/domain"
 )
 
 type HostFileParser struct{}

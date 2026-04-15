@@ -5,10 +5,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"coati/internal/adapters/secondary"
-	"coati/internal/core/domain"
-	"coati/internal/core/services"
-	"coati/internal/templates"
+	"coati/coati/internal/adapters/secondary"
+	"coati/coati/internal/core/domain"
+	"coati/coati/internal/core/services"
+	"coati/coati/internal/templates"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

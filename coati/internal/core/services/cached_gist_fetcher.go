@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"coati/internal/core/ports"
+	"coati/coati/internal/core/ports"
 )
 
 type CachedData struct {

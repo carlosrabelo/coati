@@ -10,8 +10,8 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"coati/internal/core/domain"
-	"coati/internal/core/ports"
+	"coati/coati/internal/core/domain"
+	"coati/coati/internal/core/ports"
 )
 
 type HostsGenerator struct {

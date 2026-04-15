@@ -30,7 +30,6 @@ credentials.json
 *.out
 go.work
 bin/
-coati
 coverage.out
 coverage.html
 out/*

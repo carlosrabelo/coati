@@ -9,10 +9,10 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"coati/internal/adapters/secondary"
-	"coati/internal/core/domain"
-	"coati/internal/core/services"
-	"coati/internal/templates"
+	"coati/coati/internal/adapters/secondary"
+	"coati/coati/internal/core/domain"
+	"coati/coati/internal/core/services"
+	"coati/coati/internal/templates"
 )
 
 const DefaultHostsInput = "/etc/coati/hosts.yaml"

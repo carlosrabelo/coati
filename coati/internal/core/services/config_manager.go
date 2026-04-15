@@ -7,8 +7,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"coati/internal/core/domain"
-	"coati/internal/core/ports"
+	"coati/coati/internal/core/domain"
+	"coati/coati/internal/core/ports"
 )
 
 const (
