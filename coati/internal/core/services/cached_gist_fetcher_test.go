@@ -13,8 +13,8 @@ type MockGistFetcher struct {
 	mock.Mock
 }
 
-func (m *MockGistFetcher) Fetch(gistID, token string) ([]byte, error) {
-	args := m.Called(gistID, token)
+func (m *MockGistFetcher) Fetch(gistID, token, gistFile string) ([]byte, error) {
+	args := m.Called(gistID, token, gistFile)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -33,9 +33,9 @@ func TestCachedGistFetcher_Fetch(t *testing.T) {
 	content := []byte("remote-content")
 
 	// Case 1: Cache Miss (First Call)
-	mockDelegate.On("Fetch", gistID, token).Return(content, nil).Once()
+	mockDelegate.On("Fetch", gistID, token, "").Return(content, nil).Once()
 
-	result, err := fetcher.Fetch(gistID, token)
+	result, err := fetcher.Fetch(gistID, token, "")
 	assert.NoError(t, err)
 	assert.Equal(t, content, result)
 
@@ -45,7 +45,7 @@ func TestCachedGistFetcher_Fetch(t *testing.T) {
 
 	// Case 2: Cache Hit (Immediate Second Call)
 	// Delegate should NOT be called again (asserted by .Once() above)
-	result2, err := fetcher.Fetch(gistID, token)
+	result2, err := fetcher.Fetch(gistID, token, "")
 	assert.NoError(t, err)
 	assert.Equal(t, content, result2)
 
@@ -53,9 +53,9 @@ func TestCachedGistFetcher_Fetch(t *testing.T) {
 	time.Sleep(1100 * time.Millisecond) // Wait for TTL
 
 	newContent := []byte("new-remote-content")
-	mockDelegate.On("Fetch", gistID, token).Return(newContent, nil).Once()
+	mockDelegate.On("Fetch", gistID, token, "").Return(newContent, nil).Once()
 
-	result3, err := fetcher.Fetch(gistID, token)
+	result3, err := fetcher.Fetch(gistID, token, "")
 	assert.NoError(t, err)
 	assert.Equal(t, newContent, result3)
 

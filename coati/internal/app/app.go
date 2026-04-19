@@ -23,9 +23,12 @@ type Config struct {
 	OutputConfigFile  string
 	HostsTemplateFile string
 	GistID            string
+	GistFile          string
 	GitHubToken       string
 	SaveConfig        bool
 	DryRun            bool
+	Check             bool
+	Merge             bool
 	Verbose           bool
 	ForceRefresh      bool
 }
@@ -141,12 +144,33 @@ func (app *Application) Run() error {
 		return fmt.Errorf("failed to generate SSH config: %w", err)
 	}
 
-	// 8. Output (Dry Run or Write)
+	// 8. Dry Run: show full generated content without merging
 	if app.cfg.DryRun {
 		fmt.Println("\n=== DRY RUN MODE: No files will be modified ===")
 		printColoredDiff(fmt.Sprintf("Content for %s", app.cfg.OutputHostsFile), hostsData)
 		printColoredDiff(fmt.Sprintf("Content for %s", app.cfg.OutputConfigFile), sshData)
 		fmt.Println("\n=== End of Dry Run ===")
+		return nil
+	}
+
+	// 9. Merge: wrap existing content and embed new content inside markers
+	if app.cfg.Merge {
+		hostsData, err = mergeWithMarkers(app.cfg.OutputHostsFile, hostsData)
+		if err != nil {
+			return fmt.Errorf("failed to merge hosts file: %w", err)
+		}
+		sshData, err = mergeWithMarkers(app.cfg.OutputConfigFile, sshData)
+		if err != nil {
+			return fmt.Errorf("failed to merge SSH config: %w", err)
+		}
+	}
+
+	// 10. Check: show diff between current files and what would be written
+	if app.cfg.Check {
+		fmt.Println("\n=== CHECK MODE: No files will be modified ===")
+		printFileDiff(app.cfg.OutputHostsFile, app.cfg.OutputHostsFile, hostsData)
+		printFileDiff(app.cfg.OutputConfigFile, app.cfg.OutputConfigFile, sshData)
+		fmt.Println("\n=== End of Check ===")
 		return nil
 	}
 
@@ -160,7 +184,7 @@ func (app *Application) Run() error {
 		return fmt.Errorf("failed to write SSH config: %w", err)
 	}
 
-	// 9. Post-Execution Hooks
+	// 11. Post-Execution Hooks
 	if len(globalConfig.PostHooks) > 0 {
 		app.logger.Info("Running post-execution hooks...")
 		return app.runHooks(globalConfig.PostHooks)
@@ -186,7 +210,7 @@ func (app *Application) resolveInputPath() (string, func(), error) {
 		return "", noop, fmt.Errorf("github token missing")
 	}
 
-	content, err := app.configManager.FetchGist(app.cfg.GistID, app.cfg.GitHubToken)
+	content, err := app.configManager.FetchGist(app.cfg.GistID, app.cfg.GitHubToken, app.cfg.GistFile)
 	if err != nil {
 		return "", noop, fmt.Errorf("failed to fetch Gist: %w", err)
 	}

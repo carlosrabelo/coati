@@ -78,7 +78,7 @@ func (cm *ConfigManager) SaveConfig(gistID, token string) error {
 	return nil
 }
 
-func (cm *ConfigManager) FetchGist(gistID, token string) ([]byte, error) {
+func (cm *ConfigManager) FetchGist(gistID, token, gistFile string) ([]byte, error) {
 	if gistID == "" {
 		return nil, fmt.Errorf("gist ID is empty")
 	}
@@ -87,5 +87,5 @@ func (cm *ConfigManager) FetchGist(gistID, token string) ([]byte, error) {
 	}
 
 	cm.logger.Info("Fetching configuration from Gist", "gist_id", gistID)
-	return cm.gistFetcher.Fetch(gistID, token)
+	return cm.gistFetcher.Fetch(gistID, token, gistFile)
 }

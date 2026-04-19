@@ -2,7 +2,7 @@ MAKEFLAGS += --no-print-directory
 
 .DEFAULT_GOAL := help
 
-.PHONY: build clean fmt help install lint quality run test uninstall update
+.PHONY: apply build clean fmt help install lint quality test uninstall
 
 BINARY_NAME := coati
 BUILD_DIR   := bin
@@ -21,8 +21,9 @@ build: ## Build the project
 test: ## Run tests
 	@./make/test.sh
 
-run: build ## Run the project
-	@./$(BUILD_DIR)/$(BINARY_NAME)
+apply: build ## Generate and apply hosts and SSH config to the system
+	@./$(BUILD_DIR)/$(BINARY_NAME) apply -f
+	@./make/update.sh
 
 clean: ## Clean build artifacts
 	@./make/clean.sh
@@ -41,5 +42,3 @@ fmt: ## Format code
 
 quality: fmt lint ## Run all quality checks
 
-update: run ## Update hosts and SSH config
-	@./make/update.sh

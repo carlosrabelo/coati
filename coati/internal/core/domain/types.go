@@ -1,6 +1,9 @@
 package domain
 
-import "fmt"
+import (
+	"fmt"
+	"net"
+)
 
 type GlobalConfig struct {
 	Defaults            SSHDefaults   `yaml:"defaults"`
@@ -82,6 +85,20 @@ func (c *GlobalConfig) Validate() error {
 			if err := v.ValidateHostname(alias); err != nil {
 				return fmt.Errorf("host[%d]: invalid alias %q: %w", i, alias, err)
 			}
+		}
+	}
+	seenHostnames := make(map[string]bool)
+	seenIPs := make(map[string]bool)
+	for i, h := range c.Hosts {
+		if seenHostnames[h.Hostname] {
+			return fmt.Errorf("host[%d]: duplicate hostname %q", i, h.Hostname)
+		}
+		seenHostnames[h.Hostname] = true
+		if net.ParseIP(h.IP) != nil {
+			if seenIPs[h.IP] {
+				return fmt.Errorf("host[%d]: duplicate ip %q", i, h.IP)
+			}
+			seenIPs[h.IP] = true
 		}
 	}
 	if c.Defaults.Port != 0 && (c.Defaults.Port < 1 || c.Defaults.Port > 65535) {

@@ -22,7 +22,7 @@ type GistResponse struct {
 	} `json:"files"`
 }
 
-func (g *GistFetcher) Fetch(gistID, token string) ([]byte, error) {
+func (g *GistFetcher) Fetch(gistID, token, gistFile string) ([]byte, error) {
 	url := fmt.Sprintf("https://api.github.com/gists/%s", gistID)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -51,8 +51,14 @@ func (g *GistFetcher) Fetch(gistID, token string) ([]byte, error) {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	// We assume there's at least one file and we take the first one we find
-	// In a real scenario we might want to let the user specify the filename or default to hosts.yml
+	if gistFile != "" {
+		f, ok := gist.Files[gistFile]
+		if !ok {
+			return nil, fmt.Errorf("file %q not found in gist %s", gistFile, gistID)
+		}
+		return []byte(f.Content), nil
+	}
+
 	for _, file := range gist.Files {
 		return []byte(file.Content), nil
 	}

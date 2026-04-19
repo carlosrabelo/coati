@@ -28,8 +28,12 @@ func NewCachedGistFetcher(delegate ports.GistFetcher, cacheDir string, ttl time.
 	}
 }
 
-func (c *CachedGistFetcher) Fetch(gistID, token string) ([]byte, error) {
-	cachePath := filepath.Join(c.cacheDir, gistID+".json")
+func (c *CachedGistFetcher) Fetch(gistID, token, gistFile string) ([]byte, error) {
+	cacheKey := gistID
+	if gistFile != "" {
+		cacheKey = gistID + "-" + gistFile
+	}
+	cachePath := filepath.Join(c.cacheDir, cacheKey+".json")
 
 	// 1. Try Cache
 	if data, err := os.ReadFile(cachePath); err == nil {
@@ -42,7 +46,7 @@ func (c *CachedGistFetcher) Fetch(gistID, token string) ([]byte, error) {
 	}
 
 	// 2. Fetch from Delegate
-	content, err := c.delegate.Fetch(gistID, token)
+	content, err := c.delegate.Fetch(gistID, token, gistFile)
 	if err != nil {
 		return nil, err
 	}

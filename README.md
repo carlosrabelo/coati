@@ -7,11 +7,13 @@ Coati is a modern CLI tool for managing local `/etc/hosts` and SSH configuration
 - Define hosts, aliases, and SSH options in a single YAML file
 - Automatically generates `/etc/hosts` with proper formatting and alignment
 - Generates `~/.ssh/config` from the same host definitions
-- Fetch configuration from a private GitHub Gist for portable, shareable setups
+- Fetch configuration from a private GitHub Gist; select a specific file with `--gist-file`
 - Caches Gist responses locally to reduce network calls
-- Strict validation of IP addresses and hostnames
+- Strict validation rejects duplicate hostnames and IPs before writing any file
 - Run custom commands after successful configuration generation via hooks
 - Preview changes without writing to disk with dry-run mode
+- Check what would change with a unified diff before committing with `--check`
+- Merge generated entries into existing files, preserving original content in named sections
 - Auto-completion support for bash, zsh, fish, and PowerShell
 
 ## Table of Contents
@@ -72,7 +74,7 @@ EOF
 
 2. Run Coati:
 ```bash
-sudo coati --hosts-list hosts.yaml --output-hosts /etc/hosts
+sudo coati apply --hosts-list hosts.yaml --output-hosts /etc/hosts
 ```
 
 3. Verify:
@@ -89,7 +91,7 @@ cat /etc/hosts
 2. Run Coati:
 
 ```bash
-sudo coati --hosts-list hosts.yaml --output-hosts /etc/hosts --output-config ~/.ssh/config
+sudo coati apply --hosts-list hosts.yaml --output-hosts /etc/hosts --output-config ~/.ssh/config
 ```
 
 ### Configuration Format
@@ -115,24 +117,43 @@ post_hooks:
 
 ### Advanced Commands
 
-- **Dry Run**: Preview changes with colored output.
+- **Dry Run**: Preview the full generated content with colored output, without writing.
   ```bash
-  coati --dry-run
+  coati apply --dry-run
+  ```
+
+- **Check**: Show a unified diff between current files and what would be written.
+  ```bash
+  coati apply --check
+  coati apply --check --merge   # diff of the merged result
+  ```
+
+- **Merge**: Preserve existing file content in a `# BEGIN ORIGINAL` section and manage
+  only the `# BEGIN COATI` section. Safe to run repeatedly.
+  ```bash
+  sudo coati apply --merge --output-hosts /etc/hosts
+  ```
+
+- **Gist File**: Select a specific file when the Gist contains multiple YAML files.
+  ```bash
+  coati apply --gist-id abc123 --gist-file work.yaml
   ```
 
 - **Force Refresh**: Bypass cache and fetch from Gist.
   ```bash
-  coati --force-refresh
+  coati apply --force-refresh
   ```
 
 - **Verbose Mode**: Enable debug logging.
   ```bash
-  coati --verbose
+  coati apply --verbose
   ```
 
-- **Shell Completion**: Generate auto-completion scripts.
+- **Shell Completion**: Install auto-completion for your shell.
   ```bash
-  source <(coati completion bash)
+  coati completion bash
+  coati completion zsh
+  coati completion fish
   ```
 
 ## Configuration
@@ -200,6 +221,7 @@ coati/
 ## Development
 
 ```bash
+make apply      # Build, generate, and apply config to /etc/hosts and ~/.ssh/config
 make build      # Compile binary to bin/coati
 make test       # Run all tests
 make quality    # Format, vet, and lint
