@@ -1,16 +1,3 @@
-# AI Tools
-CLAUDE.md
-CLAUDE.local.md
-.claude/
-GEMINI.md
-.gemini/
-.antigravity/
-.opencode/
-opencode.json
-.cursor/
-.aider
-.aider.conf.yml
-
 # Secrets
 .env
 .env.*
@@ -32,8 +19,8 @@ go.work
 bin/
 coverage.out
 coverage.html
-out/*
-!out/.gitkeep
+data/out/*
+!data/out/.gitkeep
 
 # Editors
 .vscode/

@@ -139,7 +139,7 @@ post_hooks:
 
 ### Default Configuration
 
-A default configuration is provided in `cfg/config.yaml`:
+A default configuration is provided in `data/cfg/config.yaml`:
 
 ```yaml
 defaults:
@@ -170,8 +170,10 @@ post_hooks:
 ```
 coati/
 ├── bin/                    ← Compiled binaries
-├── cfg/                    ← Configuration files
-│   └── config.yaml         ← Default configuration
+├── data/                   ← Configuration and output files
+│   ├── cfg/                ← Configuration files
+│   │   └── config.yaml     ← Default configuration
+│   └── out/                ← Generated output files
 ├── cmd/                    ← CLI entry point
 │   └── coati/              ← Main application
 ├── internal/               ← Internal packages
@@ -188,7 +190,6 @@ coati/
 │   ├── clean.sh            ← Clean artifacts
 │   ├── install.sh          ← Install binary
 │   └── uninstall.sh        ← Remove binary
-├── out/                    ← Generated output files
 ├── test/                   ← Integration tests
 │   └── testdata/           ← Test fixtures
 ├── Makefile                ← Build automation

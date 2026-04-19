@@ -38,8 +38,8 @@ func main() {
 	rootCmd.AddCommand(completionCmd)
 
 	rootCmd.Flags().StringVar(&cfg.HostsListFile, "hosts-list", app.DefaultHostsInput, "Input YAML configuration file")
-	rootCmd.Flags().StringVar(&cfg.OutputHostsFile, "output-hosts", "out/etc/hosts", "Output hosts file")
-	rootCmd.Flags().StringVar(&cfg.OutputConfigFile, "output-config", "out/ssh/config", "Output SSH config file")
+	rootCmd.Flags().StringVar(&cfg.OutputHostsFile, "output-hosts", "data/out/etc/hosts", "Output hosts file")
+	rootCmd.Flags().StringVar(&cfg.OutputConfigFile, "output-config", "data/out/ssh/config", "Output SSH config file")
 	rootCmd.Flags().StringVar(&cfg.HostsTemplateFile, "hosts-template", "", "Path to custom hosts template file (uses embedded default if not specified)")
 	rootCmd.Flags().StringVar(&cfg.GistID, "gist-id", "", "GitHub Gist ID to fetch config from")
 	rootCmd.Flags().StringVar(&cfg.GitHubToken, "github-token", "", "GitHub Personal Access Token (or via GITHUB_TOKEN env)")
