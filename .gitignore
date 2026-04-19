@@ -19,6 +19,8 @@ credentials.json
 
 # Directories
 bin/
+data/out/etc/*
+data/out/ssh/*
 
 # Files
 *.exe
@@ -65,5 +67,8 @@ Thumbs.db
 # Binary directory — preserve placeholder
 !bin/.gitkeep
 
-# Output directory — preserve placeholder
-!data/out/.gitkeep
+# Output subdirectories — preserve placeholders
+!data/out/etc/
+!data/out/etc/.gitkeep
+!data/out/ssh/
+!data/out/ssh/.gitkeep
