@@ -1,11 +1,12 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
+	"time"
 )
 
 var allowedHookCommands = map[string]bool{
@@ -24,7 +25,11 @@ func validateHookCommand(hook string) error {
 		return nil
 	}
 
-	commandName := filepath.Base(parts[0])
+	if strings.ContainsAny(parts[0], "/\\") {
+		return fmt.Errorf("hook command must be a command name only, not a path: %s", parts[0])
+	}
+
+	commandName := parts[0]
 	if !allowedHookCommands[commandName] {
 		return fmt.Errorf("command not allowed: %s (allowed commands: %v)", commandName, getAllowedCommandNames())
 	}
@@ -61,7 +66,9 @@ func (app *Application) runHooks(hooks []string) error {
 			continue
 		}
 		app.logger.Info("Executing hook", "command", hook)
-		cmd := exec.Command(parts[0], parts[1:]...)
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		cmd := exec.CommandContext(ctx, parts[0], parts[1:]...)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {

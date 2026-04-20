@@ -18,11 +18,13 @@ credentials.json
 # ============================================================================
 
 # Directories
-bin/
-data/out/etc/*
-data/out/ssh/*
+bin/*
+data/src/
 
 # Files
+data/gen/etc/*
+data/gen/ssh/*
+*.bkp
 *.exe
 *.exe~
 *.dll
@@ -68,7 +70,5 @@ Thumbs.db
 !bin/.gitkeep
 
 # Output subdirectories — preserve placeholders
-!data/out/etc/
-!data/out/etc/.gitkeep
-!data/out/ssh/
-!data/out/ssh/.gitkeep
+!data/gen/etc/.gitkeep
+!data/gen/ssh/.gitkeep

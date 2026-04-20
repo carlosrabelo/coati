@@ -14,7 +14,7 @@ func main() {
 	var cfg app.Config
 
 	var applyCmd = &cobra.Command{
-		Use:   "apply",
+		Use:   "process",
 		Short: "Process YAML configuration and write hosts and SSH config files",
 		Run: func(cmd *cobra.Command, args []string) {
 			opts := &slog.HandlerOptions{Level: slog.LevelInfo}
@@ -36,8 +36,8 @@ func main() {
 	}
 
 	applyCmd.Flags().StringVar(&cfg.HostsListFile, "hosts-list", app.DefaultHostsInput, "Input YAML configuration file")
-	applyCmd.Flags().StringVar(&cfg.OutputHostsFile, "output-hosts", "data/out/etc/hosts", "Output hosts file")
-	applyCmd.Flags().StringVar(&cfg.OutputConfigFile, "output-config", "data/out/ssh/config", "Output SSH config file")
+	applyCmd.Flags().StringVar(&cfg.OutputHostsFile, "output-hosts", "data/gen/etc/hosts", "Output hosts file")
+	applyCmd.Flags().StringVar(&cfg.OutputConfigFile, "output-config", "data/gen/ssh/config", "Output SSH config file")
 	applyCmd.Flags().StringVar(&cfg.HostsTemplateFile, "hosts-template", "", "Path to custom hosts template file (uses embedded default if not specified)")
 	applyCmd.Flags().StringVar(&cfg.GistID, "gist-id", "", "GitHub Gist ID to fetch config from")
 	applyCmd.Flags().StringVar(&cfg.GistFile, "gist-file", "", "Filename inside the Gist to use (uses first file if not specified)")
@@ -57,6 +57,8 @@ func main() {
 	rootCmd.SetHelpCommand(&cobra.Command{Hidden: true})
 	rootCmd.AddCommand(applyCmd)
 	rootCmd.AddCommand(completionCmd)
+	rootCmd.AddCommand(pullCmd)
+	rootCmd.AddCommand(pushCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)

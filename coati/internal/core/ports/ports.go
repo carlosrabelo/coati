@@ -21,3 +21,7 @@ type SSHGenerator interface {
 type GistFetcher interface {
 	Fetch(gistID, token, gistFile string) ([]byte, error)
 }
+
+type GistPusher interface {
+	Push(gistID, token, gistFile string, content []byte) error
+}

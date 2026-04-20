@@ -175,12 +175,12 @@ func (app *Application) Run() error {
 	}
 
 	app.logger.Info("Writing hosts file", "path", app.cfg.OutputHostsFile)
-	if err := app.fsAdapter.WriteFile(app.cfg.OutputHostsFile, hostsData, 0644); err != nil {
+	if err := writeAtomic(app.cfg.OutputHostsFile, hostsData, 0644); err != nil {
 		return fmt.Errorf("failed to write hosts file: %w", err)
 	}
 
 	app.logger.Info("Writing SSH config", "path", app.cfg.OutputConfigFile)
-	if err := app.fsAdapter.WriteFile(app.cfg.OutputConfigFile, sshData, 0600); err != nil {
+	if err := writeAtomic(app.cfg.OutputConfigFile, sshData, 0600); err != nil {
 		return fmt.Errorf("failed to write SSH config: %w", err)
 	}
 
@@ -241,6 +241,40 @@ func loadGlobalConfig(data []byte) (domain.GlobalConfig, error) {
 		return cfg, fmt.Errorf("invalid configuration: %w", err)
 	}
 	return cfg, nil
+}
+
+// WriteAtomicPublic is the exported wrapper around writeAtomic for use outside
+// the app package.
+func WriteAtomicPublic(dest string, data []byte, perm os.FileMode) error {
+	return writeAtomic(dest, data, perm)
+}
+
+// writeAtomic writes data to a temp file in the same directory as dest, then
+// renames it into place. This ensures dest is never left partially written.
+func writeAtomic(dest string, data []byte, perm os.FileMode) error {
+	dir := filepath.Dir(dest)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(dir, ".coati-tmp-*")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	defer func() { os.Remove(tmpName) }()
+
+	if err := tmp.Chmod(perm); err != nil {
+		tmp.Close()
+		return err
+	}
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmpName, dest)
 }
 
 // resolveTemplate returns the hosts template content. Falls back to the

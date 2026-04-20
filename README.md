@@ -1,24 +1,22 @@
 # Coati
 
-Coati is a modern CLI tool for managing local `/etc/hosts` and SSH configurations (`~/.ssh/config`). It allows you to define your infrastructure in a clean YAML format and generate the necessary system files automatically.
+CLI that generates `/etc/hosts` and `~/.ssh/config` from a YAML definition stored locally or fetched from a private GitHub Gist.
 
 ## Highlights
 
 - Define hosts, aliases, and SSH options in a single YAML file
-- Automatically generates `/etc/hosts` with proper formatting and alignment
+- Generates `/etc/hosts` with proper formatting and column alignment
 - Generates `~/.ssh/config` from the same host definitions
-- Fetch configuration from a private GitHub Gist; select a specific file with `--gist-file`
+- Pull config from a private GitHub Gist; push local changes back with `coati push`
 - Caches Gist responses locally to reduce network calls
 - Strict validation rejects duplicate hostnames and IPs before writing any file
-- Run custom commands after successful configuration generation via hooks
-- Preview changes without writing to disk with dry-run mode
-- Check what would change with a unified diff before committing with `--check`
-- Merge generated entries into existing files, preserving original content in named sections
-- Auto-completion support for bash, zsh, fish, and PowerShell
+- Merge mode preserves existing file content in named `# BEGIN ORIGINAL` sections
+- Check mode shows a unified diff before any file is written
+- Dry-run mode previews generated content without touching disk
+- Shell completion for bash, zsh, fish, and PowerShell
 
 ## Table of Contents
 
-- [Highlights](#highlights)
 - [Overview](#overview)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
@@ -27,29 +25,32 @@ Coati is a modern CLI tool for managing local `/etc/hosts` and SSH configuration
 - [Configuration](#configuration)
 - [Project Layout](#project-layout)
 - [Development](#development)
-- [Testing](#testing)
-- [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
 - [License](#license)
 
 ## Overview
 
-Coati simplifies infrastructure management by providing a single source of truth for host definitions. Instead of manually editing `/etc/hosts` and `~/.ssh/config`, you define your servers once in a YAML file and Coati handles the rest. This approach ensures consistency across your systems, reduces manual errors, and makes it easy to share configurations with your team.
+Coati provides a single source of truth for host definitions. Instead of manually editing `/etc/hosts` and `~/.ssh/config`, define your servers once in a YAML file and Coati handles the rest. Store the YAML in a private GitHub Gist to keep it synchronized across machines.
 
 ## Prerequisites
 
-- **Go 1.25+** (for building from source)
-- **YAML file** (configuration file)
+- **Go 1.25+** — required to build from source; [download](https://go.dev/dl/)
 - **Write permissions** for `/etc/hosts` (requires sudo)
 - **Write permissions** for `~/.ssh/config`
 
 ## Installation
 
-### From Source
+### Build from Source
 
 ```bash
 git clone https://github.com/carlosrabelo/coati
 cd coati
+make build
+```
+
+Install to `~/.local/bin` (no root required):
+
+```bash
 make install
 ```
 
@@ -61,9 +62,8 @@ go install github.com/carlosrabelo/coati/cmd/coati@latest
 
 ## Quick Start
 
-Get started in less than 2 minutes:
+1. Create a YAML config file:
 
-1. Create a configuration file:
 ```bash
 cat > hosts.yaml << 'EOF'
 hosts:
@@ -72,81 +72,72 @@ hosts:
 EOF
 ```
 
-2. Run Coati:
-```bash
-sudo coati apply --hosts-list hosts.yaml --output-hosts /etc/hosts
-```
+2. Process and verify:
 
-3. Verify:
 ```bash
-cat /etc/hosts
-# Output: 192.168.1.100    my-server
+coati process --hosts-list hosts.yaml --output-hosts data/gen/etc/hosts
+cat data/gen/etc/hosts
+# 192.168.1.100    my-server
 ```
 
 ## Usage
 
-### Basic Usage
+### process
 
-1. Create a configuration file (e.g., `hosts.yaml`).
-2. Run Coati:
+Generate `/etc/hosts` and `~/.ssh/config` from a YAML file:
 
 ```bash
-sudo coati apply --hosts-list hosts.yaml --output-hosts /etc/hosts --output-config ~/.ssh/config
+coati process --hosts-list hosts.yaml
 ```
 
-### Configuration Format
+Write directly to system paths (requires sudo for `/etc/hosts`):
 
-```yaml
-defaults:
-  user: ubuntu
-  port: 22
-  identity_file: ~/.ssh/id_rsa
-
-hosts:
-  - hostname: web-prod
-    ip: 192.168.1.10
-    aliases: [www, portal]
-    user: admin
-
-  - hostname: db-prod
-    ip: 192.168.1.20
-
-post_hooks:
-  - "sudo systemctl restart dnsmasq"
+```bash
+coati process --output-hosts /etc/hosts --output-config ~/.ssh/config
 ```
 
-### Advanced Commands
+### pull / push
 
-- **Dry Run**: Preview the full generated content with colored output, without writing.
+Download Gist content to `data/src/gist.txt`:
+
+```bash
+coati pull
+```
+
+Upload `data/src/gist.txt` back to the Gist:
+
+```bash
+coati push
+```
+
+Both commands read `--gist-id` and `--github-token` from flags, the `GITHUB_TOKEN` environment variable, or the saved config at `/etc/coati/config.yaml`.
+
+### Advanced flags
+
+- **Dry Run**: Preview generated content without writing.
   ```bash
-  coati apply --dry-run
+  coati process --dry-run
   ```
 
 - **Check**: Show a unified diff between current files and what would be written.
   ```bash
-  coati apply --check
-  coati apply --check --merge   # diff of the merged result
+  coati process --check
+  coati process --check --merge
   ```
 
-- **Merge**: Preserve existing file content in a `# BEGIN ORIGINAL` section and manage
-  only the `# BEGIN COATI` section. Safe to run repeatedly.
+- **Merge**: Preserve existing content in a `# BEGIN ORIGINAL` section; manage only the `# BEGIN COATI` section. Safe to run repeatedly.
   ```bash
-  sudo coati apply --merge --output-hosts /etc/hosts
+  sudo coati process --merge --output-hosts /etc/hosts
   ```
 
-- **Gist File**: Select a specific file when the Gist contains multiple YAML files.
+- **Gist File**: Select a specific file when the Gist contains multiple files.
   ```bash
-  coati apply --gist-id abc123 --gist-file work.yaml
+  coati process --gist-id abc123 --gist-file work.yaml
   ```
 
-- **Force Refresh**: Bypass cache and fetch from Gist.
+- **Force Refresh**: Bypass the local cache and fetch from Gist.
   ```bash
-  coati apply --force-refresh
-  ```
-
-- **Verbose Mode**: Enable debug logging.
-  ```bash
-  coati apply --verbose
+  coati process --force-refresh
   ```
 
 - **Shell Completion**: Install auto-completion for your shell.
@@ -158,9 +149,7 @@ post_hooks:
 
 ## Configuration
 
-### Default Configuration
-
-A default configuration is provided in `data/cfg/config.yaml`:
+### YAML format
 
 ```yaml
 defaults:
@@ -178,159 +167,59 @@ hosts:
     ip: 192.168.1.20
 
 post_hooks:
-  - "sudo systemctl restart dnsmasq"
+  - "systemctl restart dnsmasq"
 ```
 
-### Environment Variables
+### Save Gist credentials
 
-- `GITHUB_TOKEN`: GitHub token for Gist access
-- `COATI_CONFIG_DIR`: Custom configuration directory path
+Run once to store your Gist ID and token in `/etc/coati/config.yaml`:
+
+```bash
+coati process --gist-id YOUR_GIST_ID --github-token YOUR_TOKEN --save-config
+```
+
+After saving, `coati pull`, `coati push`, and `coati process` all work without flags.
+
+### Environment variables
+
+- `GITHUB_TOKEN` — GitHub token for Gist access
+- `COATI_CONFIG_DIR` — override the default config directory (`/etc/coati`)
 
 ## Project Layout
 
 ```
+bin/                        # Compiled binaries (git-ignored)
+data/
+  src/gist.txt              # Local copy of the Gist (written by coati pull)
+  gen/etc/hosts             # Generated hosts file (written by coati process)
+  gen/ssh/config            # Generated SSH config (written by coati process)
 coati/
-├── bin/                    ← Compiled binaries
-├── data/                   ← Configuration and output files
-│   ├── cfg/                ← Configuration files
-│   │   └── config.yaml     ← Default configuration
-│   └── out/                ← Generated output files
-├── cmd/                    ← CLI entry point
-│   └── coati/              ← Main application
-├── internal/               ← Internal packages
-│   ├── adapters/           ← Port implementations
-│   │   └── secondary/      ← Outbound adapters
-│   ├── core/               ← Business logic
-│   │   ├── domain/         ← Domain models
-│   │   ├── ports/          ← Interfaces
-│   │   └── services/       ← Application services
-│   └── templates/          ← Embedded templates
-├── make/                   ← Automation scripts
-│   ├── build.sh            ← Build project
-│   ├── test.sh             ← Run tests
-│   ├── clean.sh            ← Clean artifacts
-│   ├── install.sh          ← Install binary
-│   └── uninstall.sh        ← Remove binary
-├── test/                   ← Integration tests
-│   └── testdata/           ← Test fixtures
-├── Makefile                ← Build automation
-├── README.md               ← English documentation
-└── README-PT.md            ← Portuguese documentation
+  cmd/coati/                # CLI entry point
+  internal/adapters/        # Port implementations (filesystem, GitHub API)
+  internal/core/domain/     # Domain types and validation
+  internal/core/ports/      # Interfaces
+  internal/core/services/   # Business logic (generators, cache, config)
+  internal/templates/       # Embedded default templates
+make/                       # Build and install scripts
 ```
 
 ## Development
 
 ```bash
-make apply      # Build, generate, and apply config to /etc/hosts and ~/.ssh/config
 make build      # Compile binary to bin/coati
 make test       # Run all tests
 make quality    # Format, vet, and lint
 make install    # Install to ~/.local/bin
-```
-
-## Testing
-
-### Running Tests
-
-```bash
-make test
-```
-
-Or directly:
-
-```bash
-./run/test.sh
-```
-
-### Test Coverage
-
-```bash
-go test -cover ./...
-```
-
-### Test Structure
-
-- **Unit tests**: `**/*_test.go`
-- **Integration tests**: `test/integration_test.go`
-- **Test data**: `test/testdata/`
-
-### Current Coverage
-
-- `cmd/coati`: ~50% (basic tests for hook validation)
-- `internal/adapters/secondary`: ~67%
-- `internal/core/domain`: ~85%
-- `internal/core/services`: ~95%
-- `internal/core/ports`: 0% (interfaces only)
-- `internal/templates`: 0% (embedded templates)
-
-## Troubleshooting
-
-### Issue: "command not found"
-
-**Solution**: Ensure installation completed successfully:
-```bash
-which coati
-# Should show: /usr/local/bin/coati or ~/.local/bin/coati
-```
-
-If not found, reinstall:
-```bash
-make install
-```
-
-### Issue: "permission denied when writing /etc/hosts"
-
-**Solution**: Run Coati with sudo:
-```bash
-sudo coati --hosts-list hosts.yaml --output-hosts /etc/hosts
-```
-
-### Issue: "hook validation failed"
-
-**Solution**: Check that the hook command is in the allowlist:
-```bash
-# Allowed commands: systemctl, service, docker, kubectl, nginx, apache2, httpd
-# Commands cannot contain: ;, &, |
-```
-
-### Issue: "connection refused when fetching from Gist"
-
-**Solution**: Check your GitHub token and network connection:
-```bash
-export GITHUB_TOKEN=your_token_here
-coati --verbose
-```
-
-### Issue: "cache not expiring"
-
-**Solution**: Force refresh to bypass cache:
-```bash
-coati --force-refresh
+make apply      # Build, process, and apply config to /etc/hosts and ~/.ssh/config
 ```
 
 ## Contributing
 
-Contributions are welcome! Please follow these guidelines:
-
 1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/your-feature`
-3. Make your changes
-4. Write tests for new functionality
-5. Ensure all tests pass: `make test`
-6. Format your code: `gofmt -w .`
-7. Run linters: `go vet ./...`
-8. Commit your changes: `git commit -m "feat: description"`
-9. Push to branch: `git push origin feature/your-feature`
-10. Open a Pull Request
-
-### Code Style
-
-- Follow standard Go conventions
-- Keep functions focused and small
-- Add package documentation
-- Write tests for all public functions
-- Use structured logging with `slog`
+2. Create a feature branch: `git checkout -b feat/description`
+3. Commit with Conventional Commits: `git commit -m "feat: add X"`
+4. Push and open a pull request
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License — see [LICENSE](LICENSE) for details.

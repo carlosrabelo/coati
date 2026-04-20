@@ -22,7 +22,7 @@ test: ## Run tests
 	@./make/test.sh
 
 apply: build ## Generate and apply hosts and SSH config to the system
-	@./$(BUILD_DIR)/$(BINARY_NAME) apply -f
+	@./$(BUILD_DIR)/$(BINARY_NAME) process -f
 	@./make/update.sh
 
 clean: ## Clean build artifacts

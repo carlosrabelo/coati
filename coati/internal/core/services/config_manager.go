@@ -11,10 +11,18 @@ import (
 	"coati/coati/internal/core/ports"
 )
 
-const (
-	defaultConfigDir = "/etc/coati"
-	defaultAppConfig = "/etc/coati/config.yaml"
-)
+const defaultConfigDir = "/etc/coati"
+
+func resolvedConfigDir() string {
+	if dir := os.Getenv("COATI_CONFIG_DIR"); dir != "" {
+		return dir
+	}
+	return defaultConfigDir
+}
+
+func resolvedAppConfig() string {
+	return resolvedConfigDir() + "/config.yaml"
+}
 
 type ConfigManager struct {
 	gistFetcher ports.GistFetcher
@@ -31,14 +39,16 @@ func NewConfigManager(logger *slog.Logger, gistFetcher ports.GistFetcher) *Confi
 func (cm *ConfigManager) LoadConfig() (domain.AppConfig, error) {
 	var config domain.AppConfig
 
+	appConfig := resolvedAppConfig()
+
 	// Check if file exists
-	if _, err := os.Stat(defaultAppConfig); os.IsNotExist(err) {
-		cm.logger.Debug("App config file not found", "path", defaultAppConfig)
+	if _, err := os.Stat(appConfig); os.IsNotExist(err) {
+		cm.logger.Debug("App config file not found", "path", appConfig)
 		return config, nil // Return empty config, not an error
 	}
 
-	cm.logger.Info("Loading app config", "path", defaultAppConfig)
-	data, err := os.ReadFile(defaultAppConfig)
+	cm.logger.Info("Loading app config", "path", appConfig)
+	data, err := os.ReadFile(appConfig)
 	if err != nil {
 		return config, fmt.Errorf("failed to read config file: %w", err)
 	}
@@ -66,15 +76,17 @@ func (cm *ConfigManager) SaveConfig(gistID, token string) error {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	if err := os.MkdirAll(defaultConfigDir, 0755); err != nil {
+	cfgDir := resolvedConfigDir()
+	if err := os.MkdirAll(cfgDir, 0755); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
-	if err := os.WriteFile(defaultAppConfig, data, 0600); err != nil {
+	appConfig := resolvedAppConfig()
+	if err := os.WriteFile(appConfig, data, 0600); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 
-	cm.logger.Info("Configuration saved securely", "path", defaultAppConfig)
+	cm.logger.Info("Configuration saved securely", "path", appConfig)
 	return nil
 }
 
