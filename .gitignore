@@ -19,7 +19,7 @@ credentials.json
 
 # Directories
 bin/*
-data/src/
+data/src/*
 
 # Files
 data/gen/etc/*
@@ -68,6 +68,9 @@ Thumbs.db
 
 # Binary directory — preserve placeholder
 !bin/.gitkeep
+
+# Source directory — preserve placeholder
+!data/src/.gitkeep
 
 # Output subdirectories — preserve placeholders
 !data/gen/etc/.gitkeep
