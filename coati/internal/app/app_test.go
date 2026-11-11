@@ -63,3 +63,8 @@ func TestApplication_CreateBackup_NotExist(t *testing.T) {
 	backupFile := targetFile + ".bak"
 	assert.NoFileExists(t, backupFile)
 }
+
+func TestChownExisting_MissingIsNoop(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "config.bak")
+	assert.NoError(t, chownExisting(missing, 1000, 1000))
+}

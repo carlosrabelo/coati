@@ -111,12 +111,15 @@ func TestHostsGenerator_GenerateHosts_WithTemplate(t *testing.T) {
 
 func TestHostsGenerator_GenerateHosts_SimplifiedMode(t *testing.T) {
 	config := domain.GlobalConfig{
-		SimplifiedModeHosts: []string{"my-computer"},
+		SimplifiedModeHosts: []string{"My-Computer"},
 		Hosts: []domain.HostConfig{
 			{IP: "10.0.0.5", Hostname: "simple-host", DNSName: "dns.name", Aliases: []string{"alias"}},
 		},
 		PTRs: []domain.PTRConfig{
 			{IP: "10.0.0.5", Domain: "ptr.domain"},
+		},
+		CNAMEs: []domain.CNAMEConfig{
+			{Target: "simple-host", Aliases: []string{"cname.alias"}},
 		},
 	}
 
@@ -130,16 +133,17 @@ func TestHostsGenerator_GenerateHosts_SimplifiedMode(t *testing.T) {
 	assert.NoError(t, err)
 	output := string(result)
 
-	// In simplified mode:
+	// In simplified mode (EqualFold on system hostname):
 	// 1. PTR/DNSName are NOT added as first alias.
 	// 2. CNAMEs are NOT added.
 	// 3. Explicit aliases ARE added.
 
 	// Expect: 10.0.0.5 simple-host alias
-	// NOT expect: ptr.domain or dns.name
+	// NOT expect: ptr.domain, dns.name, or cname.alias
 	assert.Regexp(t, `10\.0\.0\.5\s+simple-host\s+alias`, output)
 	assert.NotContains(t, output, "ptr.domain")
 	assert.NotContains(t, output, "dns.name")
+	assert.NotContains(t, output, "cname.alias")
 }
 
 func TestHostsGenerator_GenerateHosts_CNAMEviaDNSName(t *testing.T) {

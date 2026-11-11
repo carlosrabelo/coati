@@ -10,10 +10,16 @@ import (
 	"time"
 )
 
-type GistPusher struct{}
+type GistPusher struct {
+	httpClient *http.Client
+	apiBase    string
+}
 
 func NewGistPusher() *GistPusher {
-	return &GistPusher{}
+	return &GistPusher{
+		httpClient: &http.Client{Timeout: 15 * time.Second},
+		apiBase:    "https://api.github.com",
+	}
 }
 
 func (g *GistPusher) Push(gistID, token, gistFile string, content []byte) error {
@@ -36,7 +42,7 @@ func (g *GistPusher) Push(gistID, token, gistFile string, content []byte) error 
 		return fmt.Errorf("failed to encode request: %w", err)
 	}
 
-	url := fmt.Sprintf("https://api.github.com/gists/%s", gistID)
+	url := fmt.Sprintf("%s/gists/%s", g.apiBase, gistID)
 	req, err := http.NewRequest("PATCH", url, bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
@@ -45,8 +51,7 @@ func (g *GistPusher) Push(gistID, token, gistFile string, content []byte) error 
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: 15 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := g.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to push gist: %w", err)
 	}
@@ -61,7 +66,7 @@ func (g *GistPusher) Push(gistID, token, gistFile string, content []byte) error 
 }
 
 func (g *GistPusher) firstFileName(gistID, token string) (string, error) {
-	url := fmt.Sprintf("https://api.github.com/gists/%s", gistID)
+	url := fmt.Sprintf("%s/gists/%s", g.apiBase, gistID)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return "", fmt.Errorf("failed to create request: %w", err)
@@ -69,8 +74,7 @@ func (g *GistPusher) firstFileName(gistID, token string) (string, error) {
 	req.Header.Set("Authorization", "token "+token)
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 
-	client := &http.Client{Timeout: 15 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := g.httpClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to fetch gist: %w", err)
 	}

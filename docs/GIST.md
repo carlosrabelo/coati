@@ -82,7 +82,7 @@ ptrs:
 ```
 
 ## 5. Simplified Mode
-List of **system** hostnames (the value from `/etc/hostname`). When the current machine is in that list, PTR, `dns_name`, and CNAME aliases are omitted from `/etc/hosts`. Explicit host `aliases` are still written. Useful when you want stricter control on a given workstation.
+List of **system** hostnames (the value from `/etc/hostname`). Matching is case-insensitive (`EqualFold`). When the current machine is in that list, PTR, `dns_name`, and CNAME aliases are omitted from `/etc/hosts`. Explicit host `aliases` are still written. Useful when you want stricter control on a given workstation.
 
 ```yaml
 simplified_mode_hosts:

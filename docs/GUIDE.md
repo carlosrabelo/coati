@@ -20,6 +20,7 @@ This guide covers the CLI usage, commands, options, and advanced features of Coa
   - [completion](#completion)
 - [Advanced Features](#advanced-features)
   - [Automatic Backups](#automatic-backups)
+  - [Simplified Mode](#simplified-mode)
   - [Post-Execution Hooks & Security](#post-execution-hooks--security)
   - [Merge Mode](#merge-mode)
   - [Check Mode](#check-mode)
@@ -58,11 +59,11 @@ Coati uses a single YAML file (stored locally or fetched from a private GitHub G
 There is no `~/.coati`: data and cache are system-only. `pull` / `push` require root (`sudo`). Credentials live in `/etc/coati/config.yaml` (created manually).
 
 **Scopes** (`--scope`):
-*   `all` — full update (`/etc/hosts` + SSH); **root only** (default with `sudo`)
-*   `system` — only `/etc/hosts` (requires root)
+*   `all` — full update (`/etc/hosts` + SSH); default with `sudo`
+*   `system` — only `/etc/hosts`
 *   `user` — only `~/.ssh/config` (default without root; reads `/var/lib/coati/hosts.yaml`)
 
-With `sudo`, SSH is written to `SUDO_USER`'s home (not `/root`). Use `--users alice,bob,root` for multiple users.
+Without root, `all` and `system` against `/etc/hosts` fall back to `user` with a warning (SSH only). With `sudo`, SSH is written to `SUDO_USER`'s home (not `/root`). Use `--users alice,bob,root` for multiple users.
 
 ---
 
@@ -77,7 +78,7 @@ coati process [flags]
 ```
 
 **Common Flags**:
-*   `--scope <system|user|all>`: What to update (default: `all`).
+*   `--scope <system|user|all>`: What to update (default: `all` as root, `user` otherwise; without root, `all`/`system` fall back to `user`).
 *   `--users <u1,u2>`: Users whose `~/.ssh/config` to update (default: `SUDO_USER` or current user).
 *   `--hosts-list <path>`: Local YAML configuration file (default: `/var/lib/coati/hosts.yaml`).
 *   `--output-hosts <path>`: Destination hosts file (default: `/etc/hosts`).
@@ -175,8 +176,11 @@ sudo coati completion fish
 By default, the `process` command creates a backup of target files before modifying them:
 *   `/etc/hosts` is backed up to `/etc/hosts.bak`.
 *   `~/.ssh/config` is backed up to `~/.ssh/config.bak`.
-*   **File Permissions**: The backup copy preserves the original file's permissions (usually `0644` for hosts, `0600` for SSH config).
+*   **File Permissions**: The backup copy preserves the original file's permissions (usually `0644` for hosts, `0600` for SSH config). Under `sudo`, `~/.ssh/config.bak` is also `chown`ed to `SUDO_USER` (same as the config file).
 *   **Opt-out**: Bypassed by passing `--backup=false`.
+
+### Simplified Mode
+`simplified_mode_hosts` lists **system** hostnames (the value of `/etc/hostname`). When the current machine is in that list, Coati still writes every host line, but omits PTR, `dns_name`, and CNAME aliases from `/etc/hosts`. Explicit host `aliases` are still written — use those when you need a local DNS override on a simplified workstation. Matching uses `EqualFold` (case-insensitive), same as CNAME targets. See [GIST.md](GIST.md).
 
 ### Post-Execution Hooks & Security
 Post-execution hooks (`post_hooks` section in Gist YAML) allow you to run commands (like restarting a local DNS server) after Coati completes successfully.

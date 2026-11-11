@@ -48,13 +48,15 @@ func TestResolveEffectiveScope_NonRoot(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	_, err = app.resolveEffectiveScope(ScopeAll)
-	require.Error(t, err)
+	scope, err := app.resolveEffectiveScope(ScopeAll)
+	require.NoError(t, err)
+	assert.Equal(t, ScopeUser, scope)
 
-	_, err = app.resolveEffectiveScope(ScopeSystem)
-	require.Error(t, err)
+	scope, err = app.resolveEffectiveScope(ScopeSystem)
+	require.NoError(t, err)
+	assert.Equal(t, ScopeUser, scope)
 
-	scope, err := app.resolveEffectiveScope(ScopeUser)
+	scope, err = app.resolveEffectiveScope(ScopeUser)
 	require.NoError(t, err)
 	assert.Equal(t, ScopeUser, scope)
 

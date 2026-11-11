@@ -71,10 +71,10 @@ func (g *HostsGenerator) GenerateHosts() ([]byte, error) {
 		ptrMap[p.IP] = p.Domain
 	}
 
-	// Check if we are in Simplified Mode
+	// Check if we are in Simplified Mode (case-insensitive, like CNAME targets)
 	simpleMode := false
 	for _, h := range g.config.SimplifiedModeHosts {
-		if h == hostname {
+		if strings.EqualFold(h, hostname) {
 			simpleMode = true
 			break
 		}

@@ -20,6 +20,7 @@ Este guia detalha o uso da CLI, comandos, opções e recursos avançados do Coat
   - [completion](#completion)
 - [Recursos Avançados](#recursos-avançados)
   - [Backups Automáticos](#backups-automáticos)
+  - [Modo Simplificado](#modo-simplificado)
   - [Hooks de Pós-Execução e Segurança](#hooks-de-pós-execução-e-segurança)
   - [Modo Merge](#modo-merge)
   - [Modo Check](#modo-check)
@@ -58,11 +59,11 @@ O Coati usa um único arquivo YAML (salvo localmente ou em um GitHub Gist privad
 Não há `~/.coati`: dados e cache são só do sistema. `pull` / `push` precisam de root (`sudo`). Credenciais ficam em `/etc/coati/config.yaml` (criado manualmente).
 
 **Escopos** (`--scope`):
-*   `all` — atualização completa (`/etc/hosts` + SSH); **somente root** (padrão com `sudo`)
-*   `system` — só `/etc/hosts` (requer root)
+*   `all` — atualização completa (`/etc/hosts` + SSH); padrão com `sudo`
+*   `system` — só `/etc/hosts`
 *   `user` — só `~/.ssh/config` (padrão sem root; lê `/var/lib/coati/hosts.yaml`)
 
-Com `sudo`, o SSH é escrito no home de `SUDO_USER` (não em `/root`). Use `--users alice,bob,root` para vários usuários.
+Sem root, `all` e `system` contra `/etc/hosts` caem para `user` com aviso (só SSH). Com `sudo`, o SSH é escrito no home de `SUDO_USER` (não em `/root`). Use `--users alice,bob,root` para vários usuários.
 
 ---
 
@@ -77,7 +78,7 @@ coati process [flags]
 ```
 
 **Flags Comuns**:
-*   `--scope <system|user|all>`: O que atualizar (padrão: `all`).
+*   `--scope <system|user|all>`: O que atualizar (padrão: `all` como root, `user` caso contrário; sem root, `all`/`system` caem para `user`).
 *   `--users <u1,u2>`: Usuários cujo `~/.ssh/config` atualizar (padrão: `SUDO_USER` ou usuário atual).
 *   `--hosts-list <caminho>`: Arquivo local de configuração YAML (padrão: `/var/lib/coati/hosts.yaml`).
 *   `--output-hosts <caminho>`: Arquivo de hosts de destino (padrão: `/etc/hosts`).
@@ -175,8 +176,11 @@ sudo coati completion fish
 Por padrão, o comando `process` realiza uma cópia de segurança antes de sobrescrever os arquivos:
 *   `/etc/hosts` é copiado para `/etc/hosts.bak`.
 *   `~/.ssh/config` é copiado para `~/.ssh/config.bak`.
-*   **Permissões**: A cópia preserva as permissões de acesso originais do arquivo (normalmente `0644` para hosts, `0600` para SSH config).
+*   **Permissões**: A cópia preserva as permissões de acesso originais do arquivo (normalmente `0644` para hosts, `0600` para SSH config). Com `sudo`, `~/.ssh/config.bak` também recebe `chown` para `SUDO_USER` (igual ao arquivo de config).
 *   **Desativação**: Pode ser pulado passando `--backup=false`.
+
+### Modo Simplificado
+`simplified_mode_hosts` lista hostnames de **sistema** (o valor de `/etc/hostname`). Quando a máquina atual está nessa lista, o Coati ainda grava todas as linhas de hosts, mas omite PTR, `dns_name` e aliases de CNAME do `/etc/hosts`. Os `aliases` explícitos do host continuam sendo escritos — use-os quando precisar sobrescrever DNS local numa estação em modo simplificado. A comparação usa `EqualFold` (sem distinguir maiúsculas/minúsculas), como nos alvos de CNAME. Veja [GIST-PT.md](GIST-PT.md).
 
 ### Hooks de Pós-Execução e Segurança
 Os hooks (`post_hooks` no YAML) permitem executar comandos (como recarregar um serviço DNS local) após a gravação bem-sucedida.

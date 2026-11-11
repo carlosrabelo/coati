@@ -285,6 +285,7 @@ func (app *Application) Run() error {
 				}
 			}
 
+			backupPath := target.path + ".bak"
 			if app.cfg.Backup {
 				if err := app.createBackup(target.path); err != nil {
 					app.logger.Warn("Failed to create backup for SSH config file", "path", target.path, "error", err)
@@ -298,6 +299,9 @@ func (app *Application) Run() error {
 			}
 			if err := chownPath(target.path, target.uid, target.gid); err != nil {
 				app.logger.Warn("Failed to chown SSH config", "path", target.path, "user", target.username, "error", err)
+			}
+			if err := chownExisting(backupPath, target.uid, target.gid); err != nil {
+				app.logger.Warn("Failed to chown SSH config backup", "path", backupPath, "user", target.username, "error", err)
 			}
 			// Also fix ownership of ~/.ssh if we created it.
 			if err := chownPath(filepath.Dir(target.path), target.uid, target.gid); err != nil {
@@ -386,8 +390,8 @@ func normalizeScope(scope string) (string, error) {
 	}
 }
 
-// resolveEffectiveScope rejects root-only scopes when not elevated and the
-// hosts output is the system path. Custom --output-hosts (tests/dev) is allowed.
+// resolveEffectiveScope degrades root-only scopes to user when not elevated and
+// the hosts output is the system path. Custom --output-hosts (tests/dev) is allowed.
 func (app *Application) resolveEffectiveScope(scope string) (string, error) {
 	if services.RunningAsRoot() || !isSystemHostsPath(app.cfg.OutputHostsFile) {
 		return scope, nil
@@ -395,8 +399,11 @@ func (app *Application) resolveEffectiveScope(scope string) (string, error) {
 
 	switch scope {
 	case ScopeSystem, ScopeAll:
-		return "", fmt.Errorf("--scope %s requires root to write %s; run with sudo (or use --scope user)",
-			scope, app.cfg.OutputHostsFile)
+		app.logger.Warn(fmt.Sprintf(
+			"scope %s requires root to write %s; falling back to --scope user (SSH only)",
+			scope, app.cfg.OutputHostsFile,
+		))
+		return ScopeUser, nil
 	default:
 		return scope, nil
 	}
@@ -418,6 +425,18 @@ func chownPath(path string, uid, gid int) error {
 		return nil
 	}
 	return os.Chown(path, uid, gid)
+}
+
+// chownExisting is like chownPath but a missing path is not an error
+// (e.g. SSH .bak when the source did not exist yet).
+func chownExisting(path string, uid, gid int) error {
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	return chownPath(path, uid, gid)
 }
 
 // resolveInputPath returns the path to the configuration file and a cleanup

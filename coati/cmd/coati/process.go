@@ -50,7 +50,7 @@ func newProcessCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&cfg.Backup, "backup", true, "Create a backup (.bak) of files before writing")
 	cmd.Flags().BoolVar(&cfg.AllowUnsafeHooks, "allow-unsafe-hooks", false, "Bypass command allowlist for post-hooks (potentially unsafe)")
 	cmd.Flags().StringSliceVar(&cfg.AllowedHooks, "allowed-hooks", []string{}, "Comma-separated list of additional allowed commands for post-hooks")
-	cmd.Flags().StringVar(&cfg.Scope, "scope", "", "What to update: system, user, or all (default: all as root, user otherwise)")
+	cmd.Flags().StringVar(&cfg.Scope, "scope", "", "What to update: system, user, or all (default: all as root, user otherwise; without root, all/system fall back to user)")
 	cmd.Flags().StringSliceVar(&cfg.Users, "users", []string{}, "Users whose ~/.ssh/config to update (default: SUDO_USER or current user)")
 
 	return cmd

@@ -11,10 +11,16 @@ import (
 	"time"
 )
 
-type GistFetcher struct{}
+type GistFetcher struct {
+	httpClient *http.Client
+	apiBase    string
+}
 
 func NewGistFetcher() *GistFetcher {
-	return &GistFetcher{}
+	return &GistFetcher{
+		httpClient: &http.Client{Timeout: 15 * time.Second},
+		apiBase:    "https://api.github.com",
+	}
 }
 
 type GistResponse struct {
@@ -24,7 +30,7 @@ type GistResponse struct {
 }
 
 func (g *GistFetcher) Fetch(gistID, token, gistFile string) ([]byte, error) {
-	url := fmt.Sprintf("https://api.github.com/gists/%s", gistID)
+	url := fmt.Sprintf("%s/gists/%s", g.apiBase, gistID)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -35,8 +41,7 @@ func (g *GistFetcher) Fetch(gistID, token, gistFile string) ([]byte, error) {
 	}
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 
-	client := &http.Client{Timeout: 15 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := g.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch gist: %w", err)
 	}
