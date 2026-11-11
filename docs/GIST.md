@@ -82,7 +82,7 @@ ptrs:
 ```
 
 ## 5. Simplified Mode
-List of hostnames that should NOT have extra Aliases/CNAMEs/PTRs processed. Useful for specific hosts where you want strict control.
+List of **system** hostnames (the value from `/etc/hostname`). When the current machine is in that list, PTR, `dns_name`, and CNAME aliases are omitted from `/etc/hosts`. Explicit host `aliases` are still written. Useful when you want stricter control on a given workstation.
 
 ```yaml
 simplified_mode_hosts:
