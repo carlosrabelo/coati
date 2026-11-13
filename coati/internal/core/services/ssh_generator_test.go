@@ -114,3 +114,27 @@ func TestSSHGenerator_GenerateSSHConfig_SecondarySort(t *testing.T) {
 	// Same IP, so compare Hostname: srv-x < srv-y
 	assert.True(t, idxSrvX < idxSrvY, "srv-x should appear before srv-y because srv-x < srv-y")
 }
+
+func TestSSHGenerator_GenerateSSHConfig_HostPattern(t *testing.T) {
+	config := domain.GlobalConfig{
+		Hosts: []domain.HostConfig{
+			{
+				Hostname: "10.13.50.*",
+				Options: map[string]string{
+					"HostKeyAlgorithms":        "+ssh-rsa",
+					"PubkeyAcceptedAlgorithms": "+ssh-rsa",
+				},
+			},
+		},
+	}
+
+	generator := NewSSHGenerator(config)
+	result, err := generator.GenerateSSHConfig()
+	assert.NoError(t, err)
+	output := string(result)
+
+	assert.Contains(t, output, "Host 10.13.50.*")
+	assert.Contains(t, output, "HostKeyAlgorithms +ssh-rsa")
+	assert.Contains(t, output, "PubkeyAcceptedAlgorithms +ssh-rsa")
+	assert.NotContains(t, output, "HostName")
+}

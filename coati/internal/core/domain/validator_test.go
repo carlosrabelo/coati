@@ -43,6 +43,9 @@ func TestValidator_ValidateHostname(t *testing.T) {
 		{"example.com", true},
 		{"my-host", true},
 		{"sub.domain.co.uk", true},
+		{"10.13.50.*", true},
+		{"*.lab.local", true},
+		{"host?", true},
 		{"-start", false},
 		{"end-", false},
 		{"in valid", false}, // space
@@ -126,6 +129,21 @@ func TestGlobalConfig_Validate(t *testing.T) {
 			name: "invalid default port",
 			config: GlobalConfig{
 				Defaults: SSHDefaults{Port: 99999},
+			},
+			wantErr: true,
+		},
+		{
+			name: "SSH host pattern with empty ip",
+			config: GlobalConfig{
+				Hosts: []HostConfig{{Hostname: "10.13.50.*", Options: map[string]string{
+					"HostKeyAlgorithms": "+ssh-rsa",
+				}}},
+			},
+		},
+		{
+			name: "SSH host pattern with ip set",
+			config: GlobalConfig{
+				Hosts: []HostConfig{{IP: "10.13.50.1", Hostname: "10.13.50.*"}},
 			},
 			wantErr: true,
 		},

@@ -2,6 +2,7 @@ package domain
 
 import (
 	"fmt"
+	"strings"
 )
 
 type GlobalConfig struct {
@@ -71,11 +72,18 @@ type SSHConfig struct {
 func (c *GlobalConfig) Validate() error {
 	v := NewValidator()
 	for i, h := range c.Hosts {
-		// The ip field accepts a valid IP address (for /etc/hosts generation) or a hostname
-		// (for SSH-only entries, e.g. "github.com", which are skipped in /etc/hosts).
-		if errIP := v.ValidateIP(h.IP); errIP != nil {
-			if errHost := v.ValidateHostname(h.IP); errHost != nil {
-				return fmt.Errorf("host[%d]: ip field %q is neither a valid IP address nor a valid hostname", i, h.IP)
+		if IsSSHHostPattern(h.Hostname) {
+			// Pattern hosts are SSH-only: no /etc/hosts line and no HostName.
+			if strings.TrimSpace(h.IP) != "" {
+				return fmt.Errorf("host[%d]: SSH host pattern %q requires empty ip", i, h.Hostname)
+			}
+		} else {
+			// The ip field accepts a valid IP address (for /etc/hosts generation) or a hostname
+			// (for SSH-only entries, e.g. "github.com", which are skipped in /etc/hosts).
+			if errIP := v.ValidateIP(h.IP); errIP != nil {
+				if errHost := v.ValidateHostname(h.IP); errHost != nil {
+					return fmt.Errorf("host[%d]: ip field %q is neither a valid IP address nor a valid hostname", i, h.IP)
+				}
 			}
 		}
 		if err := v.ValidateHostname(h.Hostname); err != nil {

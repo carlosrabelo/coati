@@ -30,7 +30,7 @@ Este guia detalha o uso da CLI, comandos, opções e recursos avançados do Coat
 
 ## Fluxo Básico
 
-O Coati usa um único arquivo YAML (salvo localmente ou em um GitHub Gist privado) como fonte da verdade para gerar os arquivos `/etc/hosts` e `~/.ssh/config`.
+O Coati usa um único arquivo YAML (salvo localmente ou em um GitHub Gist privado) como fonte da verdade para gerar os arquivos `/etc/hosts` e `~/.ssh/config`. Padrões Host SSH com `*` / `?` (por exemplo `hostname: "10.13.50.*"` sem `ip`) estão documentados em [GIST-PT.md](GIST-PT.md).
 
 ```
                   ┌──────────────┐

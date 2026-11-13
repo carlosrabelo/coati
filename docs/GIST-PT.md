@@ -30,11 +30,11 @@ defaults:
 ```
 
 ## 2. Hosts
-Esta lista define seus endpoints reais. Cada entrada gera uma linha no `/etc/hosts` E um bloco `Host` no `~/.ssh/config`.
+Esta lista define seus endpoints reais. Cada entrada com IP real gera uma linha no `/etc/hosts` E um bloco `Host` no `~/.ssh/config`.
 
 ```yaml
 hosts:
-  - ip: "10.0.0.50"              # [Obrigatório] Endereço IP ou Nome de Domínio (múltiplas entradas podem compartilhar o mesmo IP/domínio)
+  - ip: "10.0.0.50"              # [Obrigatório para hosts normais] Endereço IP ou Nome de Domínio (múltiplas entradas podem compartilhar o mesmo IP/domínio)
     hostname: "db-prod"          # [Obrigatório] Hostname canônico
     
     # [Opcional] Lista de aliases.
@@ -59,6 +59,13 @@ hosts:
       
     # [Opcional] Comentário adicionado à linha do /etc/hosts
     comment: "Banco de Dados Principal"
+
+  # Padrão Host do OpenSSH (curingas * / ?): omita o ip.
+  # Só SSH — sem linha no /etc/hosts e sem diretiva HostName.
+  - hostname: "10.13.50.*"
+    options:
+      HostKeyAlgorithms: "+ssh-rsa"
+      PubkeyAcceptedAlgorithms: "+ssh-rsa"
 ```
 
 ## 3. CNAMEs (Aliases)

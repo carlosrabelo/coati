@@ -30,7 +30,7 @@ This guide covers the CLI usage, commands, options, and advanced features of Coa
 
 ## Core Workflow
 
-Coati uses a single YAML file (stored locally or fetched from a private GitHub Gist) as the source of truth to generate your `/etc/hosts` and `~/.ssh/config` files.
+Coati uses a single YAML file (stored locally or fetched from a private GitHub Gist) as the source of truth to generate your `/etc/hosts` and `~/.ssh/config` files. SSH Host patterns with `*` / `?` (for example `hostname: "10.13.50.*"` with no `ip`) are documented in [GIST.md](GIST.md).
 
 ```
                   ┌──────────────┐

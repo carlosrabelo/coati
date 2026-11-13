@@ -286,3 +286,23 @@ func TestHostsGenerator_GenerateHosts_DuplicateIPs(t *testing.T) {
 	assert.Regexp(t, `10\.13\.250\.253\s+tail1`, output)
 	assert.Regexp(t, `10\.13\.250\.253\s+tail2`, output)
 }
+
+func TestHostsGenerator_GenerateHosts_SSHPatternOmitted(t *testing.T) {
+	config := domain.GlobalConfig{
+		Hosts: []domain.HostConfig{
+			{IP: "10.0.0.1", Hostname: "real-host"},
+			{Hostname: "10.13.50.*", Options: map[string]string{"HostKeyAlgorithms": "+ssh-rsa"}},
+		},
+	}
+
+	mockReader := new(MockFileReaderForHosts)
+	mockReader.On("ReadFile", "/etc/hostname").Return([]byte("my-computer"), nil)
+
+	generator := NewHostsGenerator(config, mockReader, "")
+	result, err := generator.GenerateHosts()
+	assert.NoError(t, err)
+	output := string(result)
+
+	assert.Regexp(t, `10\.0\.0\.1\s+real-host`, output)
+	assert.NotContains(t, output, "10.13.50.*")
+}
